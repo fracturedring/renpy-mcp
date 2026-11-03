@@ -38,7 +38,7 @@ Every mutation routes through a single guarded write pipeline (`apply_write`) â€
   - [gui/frontend/src/api/client.ts](gui/frontend/src/api/client.ts): fetch wrapper; use `api<T>("/api/...", {json, method})` for every call
   - [gui/frontend/src/api/types.ts](gui/frontend/src/api/types.ts): shared frontend types that mirror MCP tool responses
 
-- [tests/](tests/): pytest suite, 378 tests, ~10s full run (~16s with the SDK present)
+- [tests/](tests/): pytest suite, 386 tests, ~10s full run (~16s with the SDK present)
   - [tests/conftest.py](tests/conftest.py): `FIXTURE_ROOT`, `SDK_ROOT`, `parse()` helper, default `config` / `registry` fixtures
   - [tests/test_tier1.py](tests/test_tier1.py) / [test_tier2.py](tests/test_tier2.py) / [test_tier3.py](tests/test_tier3.py) / [test_tier4.py](tests/test_tier4.py): per-tier unit tests
   - [tests/test_gui_backend.py](tests/test_gui_backend.py): FastAPI TestClient; module-skipped when `RENPY_SDK` is not present

@@ -26,7 +26,7 @@ for the larger directional bets and the GUI-integration sequencing.
 End-to-end validation lives at `scripts/integration_drive.py` (40-step
 in-process drive) and `scripts/real_vn_drive.py` (drives a project that
 ships real fal-generated assets all the way to a `<name>-<version>-pc.zip`
-artifact with the assets baked in). 80 tools, 378 tests, no FAILs.
+artifact with the assets baked in). 80 tools, 386 tests, no FAILs.
 
 The integration point is still the file system; the GUI grows from a
 panel set into a visual development environment, but every IDE feature

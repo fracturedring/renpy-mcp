@@ -26,7 +26,7 @@ pytest -q
 ```
 
 The full suite runs in ~16 s with the SDK present (`RENPY_SDK=...`),
-~10 s without (SDK-gated tests skip). 378 tests at time of writing.
+~10 s without (SDK-gated tests skip). 386 tests at time of writing.
 
 For frontend work:
 

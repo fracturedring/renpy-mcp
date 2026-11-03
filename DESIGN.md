@@ -362,7 +362,7 @@ decision in the repo — see the root README for the rationale.
   resulting `.rpy` and assert on the bytes (not the diff), plus
   re-snapshot the index to confirm the new content parses back cleanly.
 
-The suite runs in ~10 seconds (378 tests at time of writing). Keep it
+The suite runs in ~10 seconds (386 tests at time of writing). Keep it
 that way: avoid fixtures that spawn real subprocesses when a mock will
 do. The lifecycle tests monkey-patch `asyncio.create_subprocess_exec` to
 spawn `sleep 30` instead of the real SDK, for example.
