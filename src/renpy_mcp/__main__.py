@@ -5,7 +5,6 @@ import asyncio
 import json
 import logging
 import os
-import shlex
 import sys
 from pathlib import Path
 
@@ -166,6 +165,37 @@ def main() -> int:
     return 0
 
 
+def _yaml_scalar(value: str) -> str:
+    """Render `value` as a YAML scalar that parses back to the same string.
+
+    We hand-write the hermes YAML block rather than pulling in PyYAML, so this
+    does the small amount of quoting YAML actually needs: plain style when the
+    value is unambiguous, single-quoted (with `'` doubled, per YAML) otherwise.
+    Single quotes keep backslashes literal, so Windows paths survive intact —
+    unlike `shlex.quote`, whose POSIX single-quoting is not YAML.
+    """
+    # `-`, `?` and `:` only start an indicator when followed by a space (or at
+    # end of the scalar), so `-m` and `--sdk` stay plain.
+    leading_indicator = (
+        len(value) == 1 and value in "-?:"
+    ) or (len(value) > 1 and value[0] in "-?:" and value[1] in " \t")
+    other_indicator = value[0] in ",[]{}#&*!|>'\"%@`"
+    plain_unsafe = (
+        not value
+        or leading_indicator
+        or other_indicator
+        or value[-1] in " \t"
+        or ": " in value
+        or " #" in value
+        or "\n" in value
+        or "\t" in value
+        or value.lower() in {"true", "false", "yes", "no", "null", "~", "on", "off"}
+    )
+    if not plain_unsafe:
+        return value
+    return "'" + value.replace("'", "''") + "'"
+
+
 def _print_harness_config(args: argparse.Namespace) -> int:
     """Emit a ready-to-paste MCP-server config snippet for `args.print_config`.
 
@@ -216,12 +246,12 @@ def _print_harness_config(args: argparse.Namespace) -> int:
         return 0
 
     # hermes-agent: YAML block to merge into ~/.hermes/config.yaml.
-    yaml_args = "\n      ".join(f"- {shlex.quote(a)}" for a in extra_args)
+    yaml_args = "\n      ".join(f"- {_yaml_scalar(a)}" for a in extra_args)
     print("# Merge into ~/.hermes/config.yaml under `mcp_servers:`. After")
     print("# editing, run `hermes mcp test renpy` to verify the connection.")
     print("mcp_servers:")
     print("  renpy:")
-    print(f"    command: {shlex.quote(str(python))}")
+    print(f"    command: {_yaml_scalar(str(python))}")
     print(f"    args:")
     print(f"      {yaml_args}")
     print("    timeout: 180")

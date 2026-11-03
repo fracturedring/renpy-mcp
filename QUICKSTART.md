@@ -75,6 +75,11 @@ The `.venv` is an isolated Python environment — like a workspace just
 for this project. `pip install -e ".[gui]"` pulls in everything
 renpy-mcp needs, plus the GUI server.
 
+On Windows, run the `gui/*.sh` scripts from **Git Bash** (it ships with
+Git for Windows), not `cmd` or PowerShell. The scripts find the Windows
+venv layout on their own, so the only thing that changes from the
+macOS/Linux steps below is which terminal you type them into.
+
 ### Step 3 — Run the launcher
 
 ```bash

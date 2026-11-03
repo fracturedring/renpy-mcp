@@ -146,6 +146,12 @@ After install you can also run `rpbuilder` directly from the activated
 venv — same launcher. For the bare server without any picker, the
 older `gui/run.sh /path/to/project /path/to/sdk` still works.
 
+The `gui/*.sh` scripts are bash, so on Windows run them from **Git
+Bash** (installed with Git for Windows) rather than `cmd` or
+PowerShell. They detect the Windows venv layout (`.venv\Scripts\`
+instead of `.venv/bin/`) themselves, and use `uv pip` when the venv is
+uv-managed.
+
 ---
 
 ## Features
@@ -358,7 +364,7 @@ end-to-end smoke probes.
 
 ## Status
 
-Alpha. **80 MCP tools** (78 default + 2 opt-in), **378 tests** passing in
+Alpha. **80 MCP tools** (78 default + 2 opt-in), **386 tests** passing in
 ~10 seconds. End-to-end smoke probes:
 `scripts/integration_drive.py` (40-step in-process drive: scaffold →
 author → diagnose → warp → translate → distribute) and

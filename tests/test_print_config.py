@@ -15,6 +15,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 
 def _run(*args: str, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
@@ -57,6 +59,33 @@ def test_print_config_hermes_yaml_has_required_keys(tmp_path: Path):
     assert "- renpy_mcp" in out
     assert f"- {fake_sdk}" in out
     assert "timeout: 180" in out
+
+
+def test_print_config_hermes_yaml_is_parseable(tmp_path: Path):
+    """The block is hand-rendered, so prove it's real YAML and round-trips.
+
+    `shlex.quote` used to render this, which produced POSIX shell quoting
+    rather than YAML — legal-looking output that a YAML parser reads
+    differently from what we meant.
+    """
+    yaml = pytest.importorskip("yaml")
+
+    fake_sdk = tmp_path / "sdk with space"
+    fake_sdk.mkdir()
+    (fake_sdk / "renpy.sh").touch()
+    proc = _run("--print-config", "hermes", "--sdk", str(fake_sdk))
+    assert proc.returncode == 0, proc.stderr
+
+    body = "\n".join(
+        ln for ln in proc.stdout.splitlines() if not ln.startswith("#")
+    )
+    payload = yaml.safe_load(body)
+    server = payload["mcp_servers"]["renpy"]
+    assert server["command"] == sys.executable
+    assert server["args"][0] == "-m"
+    assert server["args"][1] == "renpy_mcp"
+    assert str(fake_sdk) in server["args"]
+    assert server["timeout"] == 180
 
 
 def test_print_config_includes_explicit_project_when_given(tmp_path: Path):

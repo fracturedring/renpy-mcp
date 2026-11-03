@@ -28,6 +28,11 @@ async def run(sdk_root: Path, project_root: Path, *args: str, timeout: float = 1
     cmd = [str(sdk_root / sdk_launcher_name()), str(project_root), *args]
     proc = await asyncio.create_subprocess_exec(
         *cmd,
+        # Detach the child's stdin: under the MCP stdio transport our own stdin
+        # is a live pipe, and the Ren'Py launcher blocks forever on the
+        # inherited handle (lint then hangs until the timeout). DEVNULL keeps
+        # the engine off the transport's stdin entirely.
+        stdin=asyncio.subprocess.DEVNULL,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
