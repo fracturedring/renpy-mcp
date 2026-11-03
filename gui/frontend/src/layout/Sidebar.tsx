@@ -6,21 +6,32 @@ import {
   Ship as ShipIcon,
 } from "lucide-react";
 import type { Rail } from "@/lib/usePrefs";
+import { useI18n, type MessageKey } from "@/i18n";
 
 export type PanelId = "story" | "library" | "localization" | "ship";
 
 interface PanelMeta {
   id: PanelId;
-  label: string;
-  hint: string;
+  label: MessageKey;
+  hint: MessageKey;
   icon: React.ComponentType<{ className?: string }>;
 }
 
-const ITEMS: PanelMeta[] = [
-  { id: "story", label: "Story", hint: "map · choice", icon: GitBranch },
-  { id: "library", label: "Library", hint: "characters · assets · screens", icon: BookOpen },
-  { id: "localization", label: "Localization", hint: "translation coverage", icon: LanguagesIcon },
-  { id: "ship", label: "Ship", hint: "distribute", icon: ShipIcon },
+/**
+ * The single source of panel identity. The command palette labels the
+ * same four panels, so both read this list and the translation keys stay
+ * in one place.
+ */
+export const PANEL_ITEMS: PanelMeta[] = [
+  { id: "story", label: "nav.story", hint: "nav.storyHint", icon: GitBranch },
+  { id: "library", label: "nav.library", hint: "nav.libraryHint", icon: BookOpen },
+  {
+    id: "localization",
+    label: "nav.localization",
+    hint: "nav.localizationHint",
+    icon: LanguagesIcon,
+  },
+  { id: "ship", label: "nav.ship", hint: "nav.shipHint", icon: ShipIcon },
 ];
 
 export function Sidebar({
@@ -45,40 +56,68 @@ export function Sidebar({
     >
       <Brand showLabels={showLabels} />
       <ul className="flex-1 py-2">
-        {ITEMS.map(({ id, label, hint, icon: Icon }) => (
-          <li key={id}>
-            <button
-              type="button"
-              onClick={() => onSelect(id)}
-              title={!showLabels ? label : undefined}
-              className={clsx(
-                "w-full flex items-center gap-3 px-3 py-2 text-sm transition-colors",
-                showLabels ? "px-4" : "justify-center",
-                active === id
-                  ? "bg-white/5 text-railText border-l-2 pl-[10px]"
-                  : "text-railTextDim hover:text-railText hover:bg-white/5",
-              )}
-              style={
-                active === id
-                  ? { borderLeftColor: "var(--rp-accent)" }
-                  : undefined
-              }
-            >
-              <Icon className="w-4 h-4 shrink-0" />
-              {showLabels && (
-                <span className="flex flex-col items-start min-w-0">
-                  <span className="leading-tight">{label}</span>
-                  <span className="text-[10px] text-railTextDim font-mono leading-tight">
-                    {hint}
-                  </span>
-                </span>
-              )}
-            </button>
-          </li>
+        {PANEL_ITEMS.map(({ id, label, hint, icon: Icon }) => (
+          <PanelButton
+            key={id}
+            id={id}
+            label={label}
+            hint={hint}
+            icon={Icon}
+            active={active === id}
+            showLabels={showLabels}
+            onSelect={onSelect}
+          />
         ))}
       </ul>
       <Foot showLabels={showLabels} />
     </nav>
+  );
+}
+
+function PanelButton({
+  id,
+  label,
+  hint,
+  icon: Icon,
+  active,
+  showLabels,
+  onSelect,
+}: {
+  id: PanelId;
+  label: MessageKey;
+  hint: MessageKey;
+  icon: React.ComponentType<{ className?: string }>;
+  active: boolean;
+  showLabels: boolean;
+  onSelect: (id: PanelId) => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={() => onSelect(id)}
+        title={!showLabels ? t(label) : undefined}
+        className={clsx(
+          "w-full flex items-center gap-3 px-3 py-2 text-sm transition-colors",
+          showLabels ? "px-4" : "justify-center",
+          active
+            ? "bg-white/5 text-railText border-l-2 pl-[10px]"
+            : "text-railTextDim hover:text-railText hover:bg-white/5",
+        )}
+        style={active ? { borderLeftColor: "var(--rp-accent)" } : undefined}
+      >
+        <Icon className="w-4 h-4 shrink-0" />
+        {showLabels && (
+          <span className="flex flex-col items-start min-w-0">
+            <span className="leading-tight">{t(label)}</span>
+            <span className="text-[10px] text-railTextDim font-mono leading-tight">
+              {t(hint)}
+            </span>
+          </span>
+        )}
+      </button>
+    </li>
   );
 }
 
@@ -89,6 +128,7 @@ function PaletteRail({
   active: PanelId;
   onSelect: (id: PanelId) => void;
 }) {
+  const { t } = useI18n();
   return (
     <nav className="bg-rail text-railText w-72 shrink-0 flex flex-col border-r border-railLine">
       <div className="px-3 pt-3">
@@ -96,14 +136,16 @@ function PaletteRail({
           <span className="font-mono text-base" style={{ color: "var(--rp-accent)" }}>
             ›
           </span>
-          <span className="text-sm text-railTextDim flex-1">Go to panel…</span>
+          <span className="text-sm text-railTextDim flex-1 truncate">
+            {t("nav.goToPanel")}
+          </span>
           <kbd className="text-[10px] font-mono text-railTextDim border border-railLine rounded px-1 py-0.5">
             ⌘K
           </kbd>
         </div>
       </div>
       <ul className="flex-1 py-2 space-y-0.5">
-        {ITEMS.map(({ id, label, hint, icon: Icon }) => (
+        {PANEL_ITEMS.map(({ id, label, hint, icon: Icon }) => (
           <li key={id}>
             <button
               type="button"
@@ -116,11 +158,9 @@ function PaletteRail({
               )}
             >
               <Icon className="w-4 h-4 row-span-2" />
-              <span className="leading-tight font-medium">{label}</span>
-              <span
-                className="text-[10px] font-mono text-railTextDim col-start-2 leading-tight"
-              >
-                {hint}
+              <span className="leading-tight font-medium">{t(label)}</span>
+              <span className="text-[10px] font-mono text-railTextDim col-start-2 leading-tight">
+                {t(hint)}
               </span>
               {active === id && (
                 <span
@@ -164,6 +204,7 @@ function Brand({ showLabels }: { showLabels: boolean }) {
 }
 
 function Foot({ showLabels }: { showLabels: boolean }) {
+  const { t } = useI18n();
   return (
     <div className="px-3 py-3 border-t border-railLine">
       {showLabels ? (
@@ -172,13 +213,13 @@ function Foot({ showLabels }: { showLabels: boolean }) {
             className="w-1.5 h-1.5 rounded-full"
             style={{ background: "var(--rp-accent)" }}
           />
-          file watcher · live
+          {t("nav.watcherLive")}
         </div>
       ) : (
         <div
           className="w-1.5 h-1.5 rounded-full mx-auto"
           style={{ background: "var(--rp-accent)" }}
-          title="file watcher · live"
+          title={t("nav.watcherLive")}
         />
       )}
     </div>

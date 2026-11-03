@@ -11,6 +11,7 @@
  * appearance is just per-user editor chrome.
  */
 import { useCallback, useEffect, useState } from "react";
+import { detectLocale, type Locale } from "@/i18n";
 
 export type Theme = "light" | "cream" | "dark";
 export type Density = "compact" | "regular" | "roomy";
@@ -22,6 +23,7 @@ export interface Prefs {
   accent: AccentId;
   density: Density;
   rail: Rail;
+  locale: Locale;
 }
 
 export const ACCENT_OPTIONS: { id: AccentId; value: string; label: string }[] = [
@@ -38,6 +40,9 @@ const DEFAULTS: Prefs = {
   accent: "plum",
   density: "regular",
   rail: "labeled",
+  // First run follows the browser rather than forcing English; a stored
+  // preference always wins, so this only decides the opening language.
+  locale: detectLocale(),
 };
 
 const STORAGE_KEY = "renpy-mcp-gui-prefs";
@@ -90,6 +95,12 @@ export function usePrefs(): {
   useEffect(() => {
     document.documentElement.style.setProperty("--rp-accent", accentValue(prefs.accent));
   }, [prefs.accent]);
+
+  // Keep <html lang> honest so screen readers, spellcheck, and CSS
+  // `:lang()` / font fallback pick the right language.
+  useEffect(() => {
+    document.documentElement.lang = prefs.locale;
+  }, [prefs.locale]);
 
   // Persist on every change.
   useEffect(() => {

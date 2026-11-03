@@ -4,6 +4,8 @@ import { Clock, History, User, Bot } from "lucide-react";
 import { api } from "@/api/client";
 import { useWatcherEvent } from "@/api/ws";
 import type { LabelInfo } from "@/api/types";
+import { useI18n } from "@/i18n";
+import { relativeFromTimestamp } from "@/lib/relativeTime";
 
 interface RecentEdit {
   timestamp: number;
@@ -35,6 +37,7 @@ export function RecentDisclosure({
 }: {
   onSelectLabel: (name: string) => void;
 }) {
+  const { t } = useI18n();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const popRef = useRef<HTMLDivElement>(null);
@@ -94,10 +97,10 @@ export function RecentDisclosure({
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="px-2 py-1 rounded-md border border-line text-[11px] font-mono inline-flex items-center gap-1.5 text-ink3 hover:text-ink hover:bg-cardAlt"
-        title={`${count} recent edit${count === 1 ? "" : "s"}`}
+        title={t(count === 1 ? "recent.title" : "recent.titlePlural", { count })}
       >
         <History className="w-3.5 h-3.5" />
-        <span>Recent · {count}</span>
+        <span>{t("recent.button", { count })}</span>
       </button>
       {open && (
         <div
@@ -105,10 +108,10 @@ export function RecentDisclosure({
           className="absolute right-0 mt-1 bg-card border border-line rounded shadow-lg z-50 w-[420px] max-h-[60vh] overflow-auto"
         >
           <div className="px-3 py-2 border-b border-line bg-cardAlt/40 text-[10px] font-mono text-ink3 uppercase tracking-wide">
-            Recent edits ({count})
+            {t("recent.heading", { count })}
           </div>
           {entries.length === 0 ? (
-            <div className="px-4 py-6 text-xs text-ink3">No edits yet.</div>
+            <div className="px-4 py-6 text-xs text-ink3">{t("recent.empty")}</div>
           ) : (
             <ul className="divide-y divide-line">
               {entries.map((entry, i) => (
@@ -116,7 +119,11 @@ export function RecentDisclosure({
                   key={`${entry.timestamp}:${i}`}
                   className="px-3 py-2 hover:bg-cardAlt/40 cursor-pointer"
                   onClick={() => onEntryClick(entry)}
-                  title={entry.file.endsWith(".rpy") ? "Open in Inspector" : undefined}
+                  title={
+                    entry.file.endsWith(".rpy")
+                      ? t("recent.openInInspector")
+                      : undefined
+                  }
                 >
                   <RecentRow entry={entry} />
                 </li>
@@ -130,6 +137,7 @@ export function RecentDisclosure({
 }
 
 function RecentRow({ entry }: { entry: RecentEdit }) {
+  const { t } = useI18n();
   const Icon = entry.origin === "gui" ? User : Bot;
   return (
     <div className="flex items-start gap-2 text-xs">
@@ -141,7 +149,7 @@ function RecentRow({ entry }: { entry: RecentEdit }) {
           <span className="font-mono text-[11px] text-ink truncate">{entry.file}</span>
           <span className="font-mono text-[10px] text-ink3 shrink-0 inline-flex items-center gap-1">
             <Clock className="w-3 h-3" />
-            {relativeTime(entry.timestamp)}
+            {relativeFromTimestamp(t, entry.timestamp)}
           </span>
         </div>
         {entry.summary && (
@@ -150,13 +158,4 @@ function RecentRow({ entry }: { entry: RecentEdit }) {
       </div>
     </div>
   );
-}
-
-function relativeTime(ts: number): string {
-  const seconds = Math.max(0, Math.round((Date.now() / 1000) - ts));
-  if (seconds < 60) return `${seconds}s ago`;
-  const minutes = Math.round(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.round(minutes / 60);
-  return `${hours}h ago`;
 }

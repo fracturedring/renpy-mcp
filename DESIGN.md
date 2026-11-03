@@ -341,6 +341,48 @@ via their own harness pointed at the same `renpy-mcp` server; the GUI is
 one MCP client among many. This is the single most load-bearing design
 decision in the repo — see the root README for the rationale.
 
+### Interface localization
+
+The SPA ships English and Simplified Chinese from `frontend/src/i18n/`,
+hand-rolled rather than built on `react-i18next`. With two locales and no
+plural rules beyond English's `one`/`other`, a ~60-line runtime (context,
+`t(key, vars)`, locale detection) is cheaper to review and to keep correct
+than a dependency plus a loader that would have to work against the static
+`dist/` build the backend serves.
+
+Two properties are enforced by the compiler instead of by review:
+
+- **A missing translation cannot be committed.** Each catalog's
+  `zh-Hans` object is typed `Record<keyof typeof en, string>`, so adding
+  an `en` key without its Chinese counterpart fails `tsc -b`. An
+  untranslated string is the mistake most likely to reach production, so
+  it is made uncommittable.
+- **A key that does not exist cannot be passed to `t()`.** `MessageKey`
+  is derived from the merged catalog, so a typo is a type error rather
+  than the raw key rendering at runtime.
+
+The runtime falls back `locale table → en table → the key itself`, and
+leaves an unsupplied `{placeholder}` intact rather than rendering an empty
+string: a visible `{count}` is a loud, harmless bug report, whereas a
+blank hides the typo.
+
+Translation is display-only by construction. Anything that identifies
+project data or mirrors an external interface — `.rpy` content, label and
+character names, paths, MCP tool names and arguments, Ren'Py's own lint
+and distribute output — is rendered verbatim in every locale. A translated
+diagnostic would stop matching search results, upstream docs, and the
+strings the tools accept back.
+
+`frontend/scripts/audit-i18n.mjs` covers what the type system cannot:
+catalog key parity across files, keys that are defined but never
+referenced, and English literals left in JSX text or in
+`title`/`placeholder`/`aria-label`/`alt` attributes. It is a plain Node
+script with no dependencies, so it runs in any checkout:
+
+```bash
+cd gui/frontend && node scripts/audit-i18n.mjs
+```
+
 ---
 
 ## 9. Testing patterns

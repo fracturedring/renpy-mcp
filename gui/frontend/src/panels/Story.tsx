@@ -3,6 +3,7 @@ import { clsx } from "clsx";
 import { GitBranch, Split } from "lucide-react";
 import { StoryMap } from "@/panels/StoryMap";
 import { ChoiceView } from "@/panels/ChoiceView";
+import { useI18n } from "@/i18n";
 
 type Mode = "map" | "choice";
 
@@ -13,6 +14,7 @@ export function Story({
   selectedLabel: string | null;
   onSelectLabel: (name: string | null) => void;
 }) {
+  const { t } = useI18n();
   const [mode, setMode] = useState<Mode>("map");
   return (
     <div className="w-full h-full flex flex-col min-h-0">
@@ -21,15 +23,15 @@ export function Story({
           active={mode === "map"}
           onClick={() => setMode("map")}
           icon={<GitBranch className="w-3.5 h-3.5" />}
-          label="Map"
-          hint="branching graph"
+          label={t("story.mode.map")}
+          hint={t("story.mode.mapHint")}
         />
         <ModeButton
           active={mode === "choice"}
           onClick={() => setMode("choice")}
           icon={<Split className="w-3.5 h-3.5" />}
-          label="Choice"
-          hint="player perspective"
+          label={t("story.mode.choice")}
+          hint={t("story.mode.choiceHint")}
         />
       </div>
       <div className="flex-1 min-h-0">

@@ -167,6 +167,13 @@ That's the loop. Keep adding scenes, characters, and branches. The
 **Composers** panel has visual editors for screens, stages (multiple
 sprites at once), and image-map menus when you want them.
 
+The interface is in English by default and follows your browser's
+language on first launch. To switch, open the ⚙ preferences modal
+(or press ⌘K / Ctrl-K and pick Appearance) and change the **Language**
+row — English and 简体中文 are available. Switching the interface
+language never touches your project: dialogue, label names, and the
+`.rpy` files stay exactly as you wrote them.
+
 ### Stuck?
 
 - The browser shows nothing? Make sure `gui/launch.sh` is still running

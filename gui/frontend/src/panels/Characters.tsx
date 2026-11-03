@@ -3,8 +3,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil, X } from "lucide-react";
 import { api } from "@/api/client";
 import type { CharacterInfo } from "@/api/types";
+import { useI18n } from "@/i18n";
 
 export function Characters() {
+  const { t } = useI18n();
   const list = useQuery({
     queryKey: ["characters"],
     queryFn: () => api<{ characters: CharacterInfo[] }>("/api/characters"),
@@ -14,11 +16,15 @@ export function Characters() {
   return (
     <div className="p-8 h-full overflow-auto">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold text-zinc-800">Characters</h1>
+        <h1 className="text-2xl font-semibold text-zinc-800">{t("library.characters.title")}</h1>
       </div>
 
-      {list.isLoading && <p className="text-sm text-zinc-500">Loading…</p>}
-      {list.error && <p className="text-sm text-red-600">Error: {String(list.error)}</p>}
+      {list.isLoading && <p className="text-sm text-zinc-500">{t("common.loading")}</p>}
+      {list.error && (
+        <p className="text-sm text-red-600">
+          {t("library.error", { message: String(list.error) })}
+        </p>
+      )}
 
       {list.data && (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -27,7 +33,7 @@ export function Characters() {
           ))}
           {list.data.characters.length === 0 && (
             <p className="col-span-full text-sm text-zinc-500">
-              No characters defined yet. Add one with the renpy-mcp `add_character` tool.
+              {t("library.characters.empty")}
             </p>
           )}
         </div>
@@ -45,6 +51,7 @@ function CharacterCard({
   character: CharacterInfo;
   onEdit: () => void;
 }) {
+  const { t } = useI18n();
   // Try to extract a `color="#..."` from the raw kwargs to color the card stripe.
   const colorMatch = character.raw_args.match(/color\s*=\s*["']([^"']+)["']/);
   const color = colorMatch?.[1] ?? "#71717a";
@@ -61,12 +68,14 @@ function CharacterCard({
             type="button"
             onClick={onEdit}
             className="p-1 text-zinc-400 hover:text-zinc-700"
-            title="Edit"
+            title={t("common.edit")}
           >
             <Pencil className="w-4 h-4" />
           </button>
         </div>
-        <div className="text-xs text-zinc-500 font-mono">var: {character.var}</div>
+        <div className="text-xs text-zinc-500 font-mono">
+          {t("library.characters.var", { name: character.var })}
+        </div>
         <div className="text-xs text-zinc-400 truncate" title={character.raw_args}>
           {character.raw_args}
         </div>
@@ -79,6 +88,7 @@ function CharacterCard({
 }
 
 function EditDrawer({ character, onClose }: { character: CharacterInfo; onClose: () => void }) {
+  const { t } = useI18n();
   const qc = useQueryClient();
   const [displayName, setDisplayName] = useState(character.display_name ?? "");
   const [color, setColor] = useState(
@@ -107,20 +117,30 @@ function EditDrawer({ character, onClose }: { character: CharacterInfo; onClose:
     <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50">
       <div className="bg-card w-full sm:max-w-md rounded-t-lg sm:rounded-lg shadow-lg">
         <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-200">
-          <h2 className="font-semibold">Edit character</h2>
-          <button onClick={onClose} className="p-1 text-zinc-400 hover:text-zinc-700">
+          <h2 className="font-semibold">{t("library.characters.edit")}</h2>
+          <button
+            onClick={onClose}
+            className="p-1 text-zinc-400 hover:text-zinc-700"
+            title={t("common.close")}
+            aria-label={t("common.close")}
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
         <div className="p-5 space-y-4">
-          <Field label="Variable" value={character.var} disabled />
+          <Field label={t("library.characters.variable")} value={character.var} disabled />
           <Field
-            label="Display name"
+            label={t("library.characters.displayName")}
             value={displayName}
             onChange={setDisplayName}
-            placeholder="On-screen name"
+            placeholder={t("library.characters.displayNamePlaceholder")}
           />
-          <Field label="Color" value={color} onChange={setColor} placeholder="#0099cc" />
+          <Field
+            label={t("library.characters.color")}
+            value={color}
+            onChange={setColor}
+            placeholder="#0099cc"
+          />
           {error && <div className="text-xs text-red-600">{error}</div>}
         </div>
         <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-zinc-200 bg-zinc-50">
@@ -128,14 +148,14 @@ function EditDrawer({ character, onClose }: { character: CharacterInfo; onClose:
             onClick={onClose}
             className="px-3 py-1.5 text-sm rounded-md border border-zinc-200 hover:bg-white"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             onClick={() => update.mutate()}
             disabled={update.isPending}
             className="px-3 py-1.5 text-sm rounded-md bg-accent text-white hover:bg-indigo-600 disabled:opacity-50"
           >
-            {update.isPending ? "Saving…" : "Save"}
+            {update.isPending ? t("common.saving") : t("common.save")}
           </button>
         </div>
       </div>

@@ -4,16 +4,20 @@ import { clsx } from "clsx";
 import { Plus, Save, X, Pencil, Info } from "lucide-react";
 import { api } from "@/api/client";
 import type { VariableInfo } from "@/api/types";
+import { useI18n, type MessageKey } from "@/i18n";
 
 type KindFilter = "all" | "default" | "define";
 
-const KIND_LABEL: Record<KindFilter, string> = {
-  all: "All",
-  default: "default",
-  define: "define",
+/** Only the "all" bucket is UI copy; `default` / `define` are Ren'Py keywords. */
+const KIND_LABEL: Record<KindFilter, MessageKey | null> = {
+  all: "library.variables.all",
+  // `default` and `define` are Ren'Py keywords, not UI words — they stay verbatim.
+  default: null,
+  define: null,
 };
 
 export function Variables() {
+  const { t } = useI18n();
   const list = useQuery({
     queryKey: ["variables"],
     queryFn: () => api<{ variables: VariableInfo[] }>("/api/variables"),
@@ -34,51 +38,64 @@ export function Variables() {
   return (
     <div className="p-8 h-full overflow-auto">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold text-zinc-800">Variables</h1>
+        <h1 className="text-2xl font-semibold text-zinc-800">{t("library.variables.title")}</h1>
         <button
           onClick={() => setAdding(true)}
           className="px-3 py-1.5 text-sm rounded-md bg-accent text-white hover:bg-indigo-600 inline-flex items-center gap-1.5"
         >
-          <Plus className="w-4 h-4" /> New default
+          <Plus className="w-4 h-4" /> {t("library.variables.newDefault")}
         </button>
       </div>
 
       <div className="border-b border-zinc-200 mb-4 flex gap-1">
-        {(Object.keys(KIND_LABEL) as KindFilter[]).map((k) => (
-          <button
-            key={k}
-            onClick={() => setFilter(k)}
-            className={clsx(
-              "px-3 py-2 text-sm border-b-2 -mb-px transition-colors",
-              filter === k
-                ? "border-accent text-accent font-medium"
-                : "border-transparent text-zinc-500 hover:text-zinc-800",
-            )}
-          >
-            {KIND_LABEL[k]}
-            {list.data && (
-              <span className="ml-1.5 text-xs text-zinc-400">
-                {k === "all"
-                  ? list.data.variables.length
-                  : list.data.variables.filter((v) => v.kind === k).length}
-              </span>
-            )}
-          </button>
-        ))}
+        {(Object.keys(KIND_LABEL) as KindFilter[]).map((k) => {
+          const labelKey = KIND_LABEL[k];
+          return (
+            <button
+              key={k}
+              onClick={() => setFilter(k)}
+              className={clsx(
+                "px-3 py-2 text-sm border-b-2 -mb-px transition-colors",
+                filter === k
+                  ? "border-accent text-accent font-medium"
+                  : "border-transparent text-zinc-500 hover:text-zinc-800",
+              )}
+            >
+              {labelKey ? t(labelKey) : k}
+              {list.data && (
+                <span className="ml-1.5 text-xs text-zinc-400">
+                  {k === "all"
+                    ? list.data.variables.length
+                    : list.data.variables.filter((v) => v.kind === k).length}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
-      {list.isLoading && <p className="text-sm text-zinc-500">Loading…</p>}
-      {list.error && <p className="text-sm text-red-600">Error: {String(list.error)}</p>}
+      {list.isLoading && <p className="text-sm text-zinc-500">{t("common.loading")}</p>}
+      {list.error && (
+        <p className="text-sm text-red-600">
+          {t("library.error", { message: String(list.error) })}
+        </p>
+      )}
 
       {list.data && (
         <div className="bg-card border border-zinc-200 rounded-md overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-zinc-50 text-zinc-500 text-xs uppercase tracking-wide">
-                <th className="text-left px-4 py-2 font-medium">Name</th>
-                <th className="text-left px-4 py-2 font-medium w-20">Kind</th>
-                <th className="text-left px-4 py-2 font-medium">Value</th>
-                <th className="text-left px-4 py-2 font-medium w-48">Location</th>
+                <th className="text-left px-4 py-2 font-medium">{t("library.variables.colName")}</th>
+                <th className="text-left px-4 py-2 font-medium w-20">
+                  {t("library.variables.colKind")}
+                </th>
+                <th className="text-left px-4 py-2 font-medium">
+                  {t("library.variables.colValue")}
+                </th>
+                <th className="text-left px-4 py-2 font-medium w-48">
+                  {t("library.variables.colLocation")}
+                </th>
                 <th className="px-4 py-2 w-12"></th>
               </tr>
             </thead>
@@ -86,7 +103,7 @@ export function Variables() {
               {filtered.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-4 py-6 text-center text-zinc-500 text-sm">
-                    No variables in this filter.
+                    {t("library.variables.emptyFilter")}
                   </td>
                 </tr>
               )}
@@ -110,9 +127,9 @@ export function Variables() {
       <p className="mt-4 text-xs text-zinc-500 flex items-start gap-1.5">
         <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
         <span>
-          Only `default` declarations are editable here — they participate in save/load and
-          rollback. `define` constants surface read-only; edit them via{" "}
-          <code className="font-mono">update_options_field</code> when the Build panel lands.
+          {t("library.variables.noticeBefore")}
+          <code className="font-mono">update_options_field</code>
+          {t("library.variables.noticeAfter")}
         </span>
       </p>
 
@@ -130,6 +147,7 @@ function Row({
   editable: boolean;
   onEdit: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <tr className="border-t border-zinc-100">
       <td className="px-4 py-2 font-mono text-zinc-800">{variable.name}</td>
@@ -147,12 +165,12 @@ function Row({
           <button
             onClick={onEdit}
             className="p-1 text-zinc-400 hover:text-zinc-700"
-            title="Edit value"
+            title={t("library.variables.editValue")}
           >
             <Pencil className="w-4 h-4" />
           </button>
         ) : (
-          <span className="text-[10px] text-zinc-400">read-only</span>
+          <span className="text-[10px] text-zinc-400">{t("library.variables.readOnly")}</span>
         )}
       </td>
     </tr>
@@ -160,6 +178,7 @@ function Row({
 }
 
 function EditRow({ variable, onClose }: { variable: VariableInfo; onClose: () => void }) {
+  const { t } = useI18n();
   const qc = useQueryClient();
   const [draft, setDraft] = useState(variable.value);
   const [error, setError] = useState<string | null>(null);
@@ -209,7 +228,7 @@ function EditRow({ variable, onClose }: { variable: VariableInfo; onClose: () =>
         <button
           onClick={onClose}
           className="p-1 text-zinc-400 hover:text-zinc-700"
-          title="Cancel (Esc)"
+          title={t("library.variables.cancelTitle")}
         >
           <X className="w-4 h-4" />
         </button>
@@ -217,7 +236,7 @@ function EditRow({ variable, onClose }: { variable: VariableInfo; onClose: () =>
           onClick={() => save.mutate()}
           disabled={save.isPending || draft === variable.value}
           className="p-1 text-accent disabled:text-zinc-300 hover:text-indigo-700"
-          title="Save (Enter)"
+          title={t("library.variables.saveTitle")}
         >
           <Save className="w-4 h-4" />
         </button>
@@ -242,6 +261,7 @@ function KindPill({ kind }: { kind: "default" | "define" }) {
 }
 
 function NewVariableModal({ onClose }: { onClose: () => void }) {
+  const { t } = useI18n();
   const qc = useQueryClient();
   const [name, setName] = useState("");
   const [value, setValue] = useState("False");
@@ -271,14 +291,21 @@ function NewVariableModal({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50">
       <div className="bg-card w-full sm:max-w-md rounded-t-lg sm:rounded-lg shadow-lg">
         <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-200">
-          <h2 className="font-semibold">New default</h2>
-          <button onClick={onClose} className="p-1 text-zinc-400 hover:text-zinc-700">
+          <h2 className="font-semibold">{t("library.variables.newDefault")}</h2>
+          <button
+            onClick={onClose}
+            className="p-1 text-zinc-400 hover:text-zinc-700"
+            title={t("common.close")}
+            aria-label={t("common.close")}
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
         <div className="p-5 space-y-4">
           <label className="block text-sm">
-            <span className="block text-xs font-medium text-zinc-500 mb-1">Name</span>
+            <span className="block text-xs font-medium text-zinc-500 mb-1">
+              {t("library.variables.name")}
+            </span>
             <input
               type="text"
               value={name}
@@ -292,13 +319,13 @@ function NewVariableModal({ onClose }: { onClose: () => void }) {
             />
             {!valid && name.length > 0 && (
               <span className="text-[10px] text-red-600 block mt-1">
-                Must be a valid Python identifier (letters, digits, _; cannot start with digit).
+                {t("library.variables.identifierError")}
               </span>
             )}
           </label>
           <label className="block text-sm">
             <span className="block text-xs font-medium text-zinc-500 mb-1">
-              Value (raw Python literal)
+              {t("library.variables.valueLabel")}
             </span>
             <input
               type="text"
@@ -315,14 +342,14 @@ function NewVariableModal({ onClose }: { onClose: () => void }) {
             onClick={onClose}
             className="px-3 py-1.5 text-sm rounded-md border border-zinc-200 hover:bg-white"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             onClick={() => create.mutate()}
             disabled={!valid || create.isPending || value === ""}
             className="px-3 py-1.5 text-sm rounded-md bg-accent text-white hover:bg-indigo-600 disabled:opacity-50"
           >
-            {create.isPending ? "Creating…" : "Create"}
+            {create.isPending ? t("library.variables.creating") : t("library.variables.create")}
           </button>
         </div>
       </div>

@@ -6,23 +6,25 @@ import { Assets } from "@/panels/Assets";
 import { Variables } from "@/panels/Variables";
 import { Screens } from "@/panels/Screens";
 import { MiniGames } from "@/panels/MiniGames";
+import { useI18n, type MessageKey } from "@/i18n";
 
 type Tab = "characters" | "assets" | "variables" | "screens" | "minigames";
 
 const TABS: {
   id: Tab;
-  label: string;
-  hint: string;
+  label: MessageKey;
+  hint: MessageKey;
   icon: React.ComponentType<{ className?: string }>;
 }[] = [
-  { id: "characters", label: "Characters", hint: "cast & display names", icon: Users },
-  { id: "assets", label: "Assets", hint: "bg · sprites · audio", icon: Image },
-  { id: "variables", label: "Variables", hint: "default values", icon: Database },
-  { id: "screens", label: "Screens", hint: "screen blocks · imagemaps", icon: FileText },
-  { id: "minigames", label: "Mini-Games", hint: "screen scaffolds", icon: Gamepad2 },
+  { id: "characters", label: "library.tab.characters", hint: "library.tab.charactersHint", icon: Users },
+  { id: "assets", label: "library.tab.assets", hint: "library.tab.assetsHint", icon: Image },
+  { id: "variables", label: "library.tab.variables", hint: "library.tab.variablesHint", icon: Database },
+  { id: "screens", label: "library.tab.screens", hint: "library.tab.screensHint", icon: FileText },
+  { id: "minigames", label: "library.tab.minigames", hint: "library.tab.minigamesHint", icon: Gamepad2 },
 ];
 
 export function Library() {
+  const { t } = useI18n();
   const [tab, setTab] = useState<Tab>("characters");
   return (
     <div className="w-full h-full flex flex-col min-h-0">
@@ -40,8 +42,8 @@ export function Library() {
             )}
           >
             <Icon className="w-3.5 h-3.5" />
-            <span className="font-medium">{label}</span>
-            <span className="text-[10px] font-mono text-ink3">{hint}</span>
+            <span className="font-medium">{t(label)}</span>
+            <span className="text-[10px] font-mono text-ink3">{t(hint)}</span>
           </button>
         ))}
       </div>

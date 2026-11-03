@@ -188,7 +188,9 @@ older `gui/run.sh /path/to/project /path/to/sdk` still works.
   ImageMap, Menu); Build (lint + per-platform distribute). Theme tokens
   drive light / cream / dark surfaces × six accent presets, sidebar
   variants (icon / labeled / palette), preferences modal, ⌘K command
-  palette spanning panels and labels. Watcher self-write suppression
+  palette spanning panels and labels, and an English / Simplified Chinese
+  interface language switch that follows the browser's locale on first
+  run. Watcher self-write suppression
   keeps the GUI from echoing the agent's own edits.
 - **No chat panel in the GUI** — agent interaction happens in your
   existing LLM harness pointed at the same `renpy-mcp`. The file system
@@ -343,6 +345,29 @@ sidebar variants (`icon` / `labeled` / `palette`), preferences modal,
 ⌘K command palette. All driven by CSS variables in `theme.css`;
 preferences persist in `localStorage`.
 
+### Interface language
+
+The UI ships in English and Simplified Chinese, switched from the
+**Language** row in the preferences modal (⌘K → Appearance, or the ⚙
+button in the header). The first launch follows your browser's language:
+anything starting with `zh` resolves to Simplified Chinese, everything
+else to English. The choice is stored alongside the theme, so it survives
+a reload.
+
+![Preferences modal in Simplified Chinese](docs/screenshots/08_preferences_zh.png)
+
+Translation is a display concern only. Dialogue, label names, character
+and variable names, file paths, MCP tool names, and Ren'Py's own lint and
+distribute output stay verbatim in the source language — a translated
+diagnostic would no longer match search results or upstream docs. See
+[gui/frontend/src/i18n/README.md](gui/frontend/src/i18n/README.md) for
+the catalog layout, the terminology table, and how to add a locale.
+
+![Story Map in Simplified Chinese](docs/screenshots/09_story_map_zh.png)
+
+Label ids, line counts beside them, and `jump` / `call` in the legend stay
+verbatim — they are what the author types into `.rpy`, not chrome.
+
 ---
 
 # For contributors
@@ -492,6 +517,9 @@ gui/                         # browser-based editor
     panels/                  # one component per left-rail panel
     api/                     # fetch wrapper + shared types
     layout/                  # Sidebar, Header
+    i18n/                    # locale switch + per-surface string catalogs
+  frontend/scripts/
+    audit-i18n.mjs           # catalog parity, dead keys, leftover literals
   run.sh                     # production entrypoint (builds on first run)
   dev.sh                     # hot-reload: backend + Vite dev server
 

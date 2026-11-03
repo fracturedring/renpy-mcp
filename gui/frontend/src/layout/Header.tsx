@@ -5,6 +5,8 @@ import { api } from "@/api/client";
 import { useWatcherEvent } from "@/api/ws";
 import { LintBadge } from "@/layout/LintBadge";
 import { RecentDisclosure } from "@/layout/RecentDisclosure";
+import { useI18n } from "@/i18n";
+import { relativeFromDate } from "@/lib/relativeTime";
 
 interface PreviewStatus {
   running: boolean;
@@ -24,6 +26,7 @@ export function Header({
   onOpenPrefs: () => void;
   onSelectLabel: (name: string) => void;
 }) {
+  const { t } = useI18n();
   const meta = useQuery({
     queryKey: ["meta"],
     queryFn: () => api<{ project_root: string }>("/api/meta"),
@@ -41,9 +44,12 @@ export function Header({
   return (
     <header className="bg-card border-b border-line h-14 flex items-center justify-between px-6 shrink-0">
       <div className="flex items-baseline gap-3 min-w-0">
-        <span className="text-[10px] uppercase tracking-wide text-ink3">project</span>
+        <span className="text-[10px] uppercase tracking-wide text-ink3">
+          {t("header.project")}
+        </span>
         <span className="font-serif text-base text-ink truncate">
-          {projectName || "(no project)"}
+          {/* The project directory name is data, never translated. */}
+          {projectName || t("header.noProject")}
         </span>
         {meta.data && (
           <span className="text-[11px] text-ink3 font-mono truncate">
@@ -60,8 +66,8 @@ export function Header({
           type="button"
           onClick={onOpenPrefs}
           className="p-1.5 text-ink3 hover:text-ink rounded-md hover:bg-cardAlt"
-          title="Appearance & preferences"
-          aria-label="Appearance"
+          title={t("header.appearance")}
+          aria-label={t("header.appearanceAria")}
         >
           <Settings className="w-4 h-4" />
         </button>
@@ -70,10 +76,10 @@ export function Header({
           type="button"
           className="px-3 py-1.5 text-sm rounded-md text-white opacity-50 inline-flex items-center gap-1.5 cursor-not-allowed"
           style={{ background: "var(--rp-accent)" }}
-          title="Distribution build is not yet wired (build_distribution MCP tool pending)"
+          title={t("header.exportDisabled")}
           disabled
         >
-          <Download className="w-4 h-4" /> Export .rpy
+          <Download className="w-4 h-4" /> {t("header.export")}
         </button>
       </div>
     </header>
@@ -81,12 +87,13 @@ export function Header({
 }
 
 function WatcherPill() {
+  const { t } = useI18n();
   const evt = useWatcherEvent();
   // Re-render once a second so the relative timestamp keeps moving without
   // depending on the next watcher event arriving.
   const [, tick] = useState(0);
   useEffect(() => {
-    const id = window.setInterval(() => tick((t) => t + 1), 1000);
+    const id = window.setInterval(() => tick((n) => n + 1), 1000);
     return () => window.clearInterval(id);
   }, []);
 
@@ -94,10 +101,11 @@ function WatcherPill() {
     return (
       <span className="hidden md:inline-flex items-center gap-1.5 text-[11px] font-mono text-ink3">
         <span className="w-1.5 h-1.5 rounded-full bg-ink3" />
-        watcher · idle
+        {t("header.watcherIdle")}
       </span>
     );
   }
+  // Path and action are data: they stay verbatim in every locale.
   const filename = evt.path.split("/").pop() || evt.path;
   return (
     <span
@@ -108,21 +116,13 @@ function WatcherPill() {
         className="w-1.5 h-1.5 rounded-full animate-pulse"
         style={{ background: "var(--rp-accent)" }}
       />
-      watcher · {filename} · {relativeTime(evt.at)}
+      watcher · {filename} · {relativeFromDate(t, evt.at)}
     </span>
   );
 }
 
-function relativeTime(at: Date): string {
-  const seconds = Math.max(0, Math.round((Date.now() - at.getTime()) / 1000));
-  if (seconds < 60) return `${seconds}s ago`;
-  const minutes = Math.round(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.round(minutes / 60);
-  return `${hours}h ago`;
-}
-
 function DraftingToggle() {
+  const { t } = useI18n();
   // Phase 5 wires this to `set_drafting_mode`. Until then it's a visible
   // placeholder so the surface settles before the backend lands.
   return (
@@ -130,15 +130,16 @@ function DraftingToggle() {
       type="button"
       disabled
       className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-mono text-ink3 border border-line opacity-60 cursor-not-allowed"
-      title="Drafting mode lands in Phase 5 — set_drafting_mode + warp_to."
+      title={t("header.draftingHint")}
     >
       <FileEdit className="w-3.5 h-3.5" />
-      drafting · off
+      {t("header.draftingOff")}
     </button>
   );
 }
 
 function PreviewButton({ status }: { status: PreviewStatus | undefined }) {
+  const { t } = useI18n();
   const qc = useQueryClient();
   const running = status?.running === true;
 
@@ -162,8 +163,8 @@ function PreviewButton({ status }: { status: PreviewStatus | undefined }) {
       disabled={pending || !status}
       title={
         running
-          ? `Stop the running Ren'Py preview (pid ${status?.pid})`
-          : "Launch the project in Ren'Py"
+          ? t("header.previewStopTitle", { pid: status?.pid ?? "" })
+          : t("header.previewLaunchTitle")
       }
       className={
         running
@@ -172,7 +173,11 @@ function PreviewButton({ status }: { status: PreviewStatus | undefined }) {
       }
     >
       <Icon className={pending ? "w-4 h-4 animate-spin" : "w-4 h-4"} />
-      {pending ? "Working…" : running ? "Stop preview" : "Preview"}
+      {pending
+        ? t("common.working")
+        : running
+          ? t("header.previewStop")
+          : t("header.preview")}
     </button>
   );
 }
