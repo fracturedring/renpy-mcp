@@ -206,3 +206,49 @@ def test_find_frontend_dist_returns_none_when_missing(monkeypatch, tmp_path):
     fake_module.write_text("# stub\n")
     monkeypatch.setattr(L, "__file__", str(fake_module))
     assert L.find_frontend_dist() is None
+
+
+# ---------- console encoding --------------------------------------------------
+
+
+class _Recorder:
+    """Stand-in for sys.stdout that records reconfigure() calls."""
+
+    def __init__(self, *, raises: Exception | None = None) -> None:
+        self.calls: list[dict] = []
+        self._raises = raises
+
+    def reconfigure(self, **kwargs) -> None:
+        self.calls.append(kwargs)
+        if self._raises is not None:
+            raise self._raises
+
+
+def test_force_unicode_stdout_reconfigures_both_streams(monkeypatch):
+    """The launcher prints ✓/✗/─/█; a cp936 console raises without this."""
+    out, err = _Recorder(), _Recorder()
+    monkeypatch.setattr(L.sys, "stdout", out)
+    monkeypatch.setattr(L.sys, "stderr", err)
+
+    L._force_unicode_stdout()
+
+    assert out.calls == [{"encoding": "utf-8", "errors": "replace"}]
+    assert err.calls == [{"encoding": "utf-8", "errors": "replace"}]
+
+
+def test_force_unicode_stdout_tolerates_unreconfigurable_streams(monkeypatch):
+    """A detached or read-only stream must not fail startup."""
+    monkeypatch.setattr(L.sys, "stdout", _Recorder(raises=ValueError("read-only")))
+    monkeypatch.setattr(L.sys, "stderr", _Recorder(raises=OSError("detached")))
+
+    L._force_unicode_stdout()  # must not raise
+
+
+def test_force_unicode_stdout_skips_streams_without_reconfigure(monkeypatch):
+    """Some wrappers (and pytest's capture) have no reconfigure()."""
+    plain = object()
+    monkeypatch.setattr(L.sys, "stdout", plain)
+    monkeypatch.setattr(L.sys, "stderr", plain)
+
+    L._force_unicode_stdout()  # must not raise
+
