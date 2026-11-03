@@ -194,6 +194,15 @@ behavior we care about.
   uses `onMouseDown`/`onMouseMove` on bare `<div>` elements; React's
   synthetic event system kills drag perf on big graphs. New
   drag-y surfaces should follow the same pattern.
+- **UI strings go through `t()`, not into JSX.** Never type a
+  user-visible sentence directly into a component: add it to the catalog
+  that owns the surface under `gui/frontend/src/i18n/catalog/`, in both
+  the `en` and `zh-Hans` objects. `Record<keyof typeof en, string>` makes
+  a missing translation a build error, and `node
+  scripts/audit-i18n.mjs` flags keys nobody references plus leftover
+  English literals. Project data — dialogue, label and character names,
+  paths, MCP output, Ren'Py diagnostics — is deliberately never
+  translated; see `gui/frontend/src/i18n/README.md`.
 
 ---
 

@@ -37,6 +37,9 @@ Every mutation routes through a single guarded write pipeline (`apply_write`) �
   - [gui/frontend/src/panels/](gui/frontend/src/panels/): one component per left-rail item (Story Map, Characters, Assets, Variables, Build, Mini-Games, Music, SceneInspector)
   - [gui/frontend/src/api/client.ts](gui/frontend/src/api/client.ts): fetch wrapper; use `api<T>("/api/...", {json, method})` for every call
   - [gui/frontend/src/api/types.ts](gui/frontend/src/api/types.ts): shared frontend types that mirror MCP tool responses
+  - [gui/frontend/src/i18n/](gui/frontend/src/i18n/): interface localization — `index.ts` (`Locale`, `translate()`, `useI18n()`, `detectLocale()`), `provider.tsx`, and one catalog file per surface under `catalog/`. English + Simplified Chinese; no i18n dependency. Adding a string means adding it to both the `en` and `zh-Hans` objects, and `Record<keyof typeof en, string>` makes a missing translation a `tsc` error.
+  - [gui/frontend/src/i18n/README.md](gui/frontend/src/i18n/README.md): what must not be translated (`.rpy` content, label/character names, paths, MCP output, Ren'Py diagnostics) and the terminology table
+  - [gui/frontend/scripts/audit-i18n.mjs](gui/frontend/scripts/audit-i18n.mjs): `node scripts/audit-i18n.mjs` — catalog key parity, dead keys, and leftover English literals in JSX text and `title`/`placeholder`/`aria-label`/`alt` props
 
 - [tests/](tests/): pytest suite, 378 tests, ~10s full run (~16s with the SDK present)
   - [tests/conftest.py](tests/conftest.py): `FIXTURE_ROOT`, `SDK_ROOT`, `parse()` helper, default `config` / `registry` fixtures
