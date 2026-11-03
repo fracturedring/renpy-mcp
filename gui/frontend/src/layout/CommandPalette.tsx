@@ -1,22 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { clsx } from "clsx";
-import {
-  GitBranch,
-  BookOpen,
-  Languages as LanguagesIcon,
-  Ship as ShipIcon,
-  FileText,
-} from "lucide-react";
+import { FileText } from "lucide-react";
 import { api } from "@/api/client";
 import type { LabelInfo } from "@/api/types";
-import type { PanelId } from "@/layout/Sidebar";
+import { PANEL_ITEMS, type PanelId } from "@/layout/Sidebar";
+import { CATALOGS, useI18n, type MessageKey } from "@/i18n";
 
 interface PanelEntry {
   kind: "panel";
   id: PanelId;
-  label: string;
-  hint: string;
+  label: MessageKey;
+  hint: MessageKey;
   icon: React.ComponentType<{ className?: string }>;
 }
 
@@ -28,12 +23,28 @@ interface LabelEntry {
 
 type Entry = PanelEntry | LabelEntry;
 
-const PANEL_ENTRIES: PanelEntry[] = [
-  { kind: "panel", id: "story", label: "Story", hint: "map · choice", icon: GitBranch },
-  { kind: "panel", id: "library", label: "Library", hint: "characters · assets · screens", icon: BookOpen },
-  { kind: "panel", id: "localization", label: "Localization", hint: "translation coverage", icon: LanguagesIcon },
-  { kind: "panel", id: "ship", label: "Ship", hint: "distribute", icon: ShipIcon },
-];
+// Reuse the sidebar's panel list rather than keeping a second copy: two
+// hardcoded arrays drift the moment a panel is added to one of them.
+const PANEL_ENTRIES: PanelEntry[] = PANEL_ITEMS.map((item) => ({
+  kind: "panel" as const,
+  ...item,
+}));
+
+/**
+ * Panel entries match against their English *and* translated label and
+ * hint, plus the panel id. A Chinese user searching "story" should still
+ * find 剧情, and vice versa — muscle memory and docs do not switch
+ * language with the UI.
+ */
+function panelMatches(entry: PanelEntry, q: string): boolean {
+  if (entry.id.toLowerCase().includes(q)) return true;
+  for (const locale of ["en", "zh-Hans"] as const) {
+    const table = CATALOGS[locale];
+    if (table[entry.label]?.toLowerCase().includes(q)) return true;
+    if (table[entry.hint]?.toLowerCase().includes(q)) return true;
+  }
+  return false;
+}
 
 export function CommandPalette({
   onClose,
@@ -44,6 +55,7 @@ export function CommandPalette({
   onSelectPanel: (id: PanelId) => void;
   onSelectLabel: (name: string) => void;
 }) {
+  const { t } = useI18n();
   const [query, setQuery] = useState("");
   const [cursor, setCursor] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -64,13 +76,8 @@ export function CommandPalette({
     const q = query.trim().toLowerCase();
     if (!q) return all;
     return all.filter((e) => {
-      if (e.kind === "panel") {
-        return (
-          e.label.toLowerCase().includes(q) ||
-          e.id.toLowerCase().includes(q) ||
-          e.hint.toLowerCase().includes(q)
-        );
-      }
+      if (e.kind === "panel") return panelMatches(e, q);
+      // Label names and file paths are identifiers: matched verbatim.
       return e.name.toLowerCase().includes(q) || e.file.toLowerCase().includes(q);
     });
   }, [labelsQ.data, query]);
@@ -125,10 +132,7 @@ export function CommandPalette({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-2 px-4 py-3 border-b border-line">
-          <span
-            className="font-mono text-base"
-            style={{ color: "var(--rp-accent)" }}
-          >
+          <span className="font-mono text-base" style={{ color: "var(--rp-accent)" }}>
             ›
           </span>
           <input
@@ -138,16 +142,18 @@ export function CommandPalette({
               setQuery(e.target.value);
               setCursor(0);
             }}
-            placeholder="Jump to panel or label…"
+            placeholder={t("palette.placeholder")}
             className="flex-1 bg-transparent outline-none text-sm text-ink placeholder:text-ink3"
           />
           <kbd className="text-[10px] font-mono text-ink3 border border-line rounded px-1 py-0.5">
-            esc
+            {t("palette.esc")}
           </kbd>
         </div>
         <ul ref={listRef} className="max-h-80 overflow-y-auto py-1">
           {entries.length === 0 && (
-            <li className="px-4 py-6 text-center text-xs text-ink3">no matches</li>
+            <li className="px-4 py-6 text-center text-xs text-ink3">
+              {t("common.noMatches")}
+            </li>
           )}
           {entries.map((entry, idx) => (
             <li
@@ -169,17 +175,14 @@ export function CommandPalette({
               )}
               <div className="min-w-0">
                 <div className="text-sm text-ink truncate">
-                  {entry.kind === "panel" ? entry.label : entry.name}
+                  {entry.kind === "panel" ? t(entry.label) : entry.name}
                 </div>
                 <div className="text-[11px] font-mono text-ink3 truncate">
-                  {entry.kind === "panel" ? entry.hint : entry.file}
+                  {entry.kind === "panel" ? t(entry.hint) : entry.file}
                 </div>
               </div>
               {idx === cursor && (
-                <kbd
-                  className="text-[10px] font-mono"
-                  style={{ color: "var(--rp-accent)" }}
-                >
+                <kbd className="text-[10px] font-mono" style={{ color: "var(--rp-accent)" }}>
                   ↵
                 </kbd>
               )}

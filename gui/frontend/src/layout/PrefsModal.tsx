@@ -9,13 +9,24 @@ import {
   type Rail,
   type Theme,
 } from "@/lib/usePrefs";
+import { SUPPORTED_LOCALES, useI18n, type Locale, type MessageKey } from "@/i18n";
 
-const THEMES: Theme[] = ["light", "cream", "dark"];
-const DENSITIES: Density[] = ["compact", "regular", "roomy"];
-const RAILS: { id: Rail; sub: string }[] = [
-  { id: "icon", sub: "icon only" },
-  { id: "labeled", sub: "labels + hints" },
-  { id: "palette", sub: "command-first" },
+const THEMES: { id: Theme; label: MessageKey }[] = [
+  { id: "light", label: "prefs.theme.light" },
+  { id: "cream", label: "prefs.theme.cream" },
+  { id: "dark", label: "prefs.theme.dark" },
+];
+
+const DENSITIES: { id: Density; label: MessageKey }[] = [
+  { id: "compact", label: "prefs.density.compact" },
+  { id: "regular", label: "prefs.density.regular" },
+  { id: "roomy", label: "prefs.density.roomy" },
+];
+
+const RAILS: { id: Rail; label: MessageKey; sub: MessageKey }[] = [
+  { id: "icon", label: "prefs.rail.icon", sub: "prefs.rail.iconSub" },
+  { id: "labeled", label: "prefs.rail.labeled", sub: "prefs.rail.labeledSub" },
+  { id: "palette", label: "prefs.rail.palette", sub: "prefs.rail.paletteSub" },
 ];
 
 export function PrefsModal({
@@ -27,6 +38,8 @@ export function PrefsModal({
   setPref: <K extends keyof Prefs>(key: K, value: Prefs[K]) => void;
   onClose: () => void;
 }) {
+  const { t } = useI18n();
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -46,33 +59,30 @@ export function PrefsModal({
       >
         <header className="flex items-start justify-between px-6 pt-5 pb-3 border-b border-line">
           <div>
-            <div className="text-xs uppercase tracking-wide text-ink3">Workspace</div>
-            <h2 className="font-serif text-xl">Appearance</h2>
+            <div className="text-xs uppercase tracking-wide text-ink3">
+              {t("prefs.workspace")}
+            </div>
+            <h2 className="font-serif text-xl">{t("prefs.appearance")}</h2>
           </div>
           <button
             onClick={onClose}
             className="text-ink3 hover:text-ink p-1"
-            aria-label="Close"
+            aria-label={t("common.close")}
           >
             <X className="w-4 h-4" />
           </button>
         </header>
         <div className="px-6 py-5 space-y-5">
-          <Row
-            label="Theme"
-            hint="Cream is gentle on long sessions; dark for night work."
-          >
+          <Row label={t("prefs.theme")} hint={t("prefs.themeHint")}>
             <Seg
               options={THEMES}
               value={prefs.theme}
               onChange={(v) => setPref("theme", v)}
+              labelOf={(o) => t(o.label)}
             />
           </Row>
 
-          <Row
-            label="Accent"
-            hint="Used for selection, choice nodes, and primary actions."
-          >
+          <Row label={t("prefs.accent")} hint={t("prefs.accentHint")}>
             <div className="flex flex-wrap gap-2">
               {ACCENT_OPTIONS.map((a) => (
                 <button
@@ -80,34 +90,30 @@ export function PrefsModal({
                   onClick={() => setPref("accent", a.id as AccentId)}
                   className={clsx(
                     "flex items-center gap-2 px-2.5 py-1.5 rounded-md border text-xs transition-colors",
-                    prefs.accent === a.id
-                      ? "border-ink"
-                      : "border-line hover:border-ink2",
+                    prefs.accent === a.id ? "border-ink" : "border-line hover:border-ink2",
                   )}
                   title={a.label}
                 >
-                  <span
-                    className="w-3 h-3 rounded-full"
-                    style={{ background: a.value }}
-                  />
+                  <span className="w-3 h-3 rounded-full" style={{ background: a.value }} />
+                  {/* Accent names are colour words, not UI chrome, and stay
+                      in English in both locales — a translated colour name
+                      would have to be re-guessed against the swatch. */}
                   <span className="font-mono text-ink2">{a.label}</span>
                 </button>
               ))}
             </div>
           </Row>
 
-          <Row
-            label="Graph density"
-            hint="Roomy reads like a script; compact fits more on screen."
-          >
+          <Row label={t("prefs.density")} hint={t("prefs.densityHint")}>
             <Seg
               options={DENSITIES}
               value={prefs.density}
               onChange={(v) => setPref("density", v)}
+              labelOf={(o) => t(o.label)}
             />
           </Row>
 
-          <Row label="Sidebar" hint="Icon-only saves space; palette is keyboard-first.">
+          <Row label={t("prefs.sidebar")} hint={t("prefs.sidebarHint")}>
             <div className="flex gap-2">
               {RAILS.map((r) => (
                 <button
@@ -120,21 +126,44 @@ export function PrefsModal({
                       : "border-line hover:border-ink2",
                   )}
                 >
-                  <span className="font-medium text-ink">{r.id}</span>
-                  <span className="text-[10px] font-mono text-ink3">{r.sub}</span>
+                  <span className="font-medium text-ink">{t(r.label)}</span>
+                  <span className="text-[10px] font-mono text-ink3">{t(r.sub)}</span>
+                </button>
+              ))}
+            </div>
+          </Row>
+
+          <Row label={t("prefs.language")} hint={t("prefs.languageHint")}>
+            <div className="flex gap-2">
+              {SUPPORTED_LOCALES.map((l) => (
+                <button
+                  key={l.id}
+                  onClick={() => setPref("locale", l.id as Locale)}
+                  className={clsx(
+                    "px-3 py-1.5 rounded-md border text-xs transition-colors",
+                    prefs.locale === l.id
+                      ? "border-ink bg-cardAlt font-medium text-ink"
+                      : "border-line hover:border-ink2 text-ink2",
+                  )}
+                  lang={l.id}
+                >
+                  {/* Locale names are in their own language, as every
+                      language picker does: a user who cannot read the
+                      current UI must still recognise "简体中文". */}
+                  {l.label}
                 </button>
               ))}
             </div>
           </Row>
         </div>
         <footer className="px-6 pb-5 pt-3 border-t border-line flex items-center justify-between">
-          <span className="text-xs text-ink3">Saved automatically · ⎋ to close</span>
+          <span className="text-xs text-ink3">{t("prefs.autosaved")}</span>
           <button
             onClick={onClose}
             className="px-3 py-1.5 rounded-md text-sm text-white"
             style={{ background: "var(--rp-accent)" }}
           >
-            Done
+            {t("prefs.done")}
           </button>
         </footer>
       </div>
@@ -166,25 +195,27 @@ function Seg<T extends string>({
   options,
   value,
   onChange,
+  labelOf,
 }: {
-  options: readonly T[];
+  options: readonly { id: T; label: MessageKey }[];
   value: T;
   onChange: (v: T) => void;
+  labelOf: (option: { id: T; label: MessageKey }) => string;
 }) {
   return (
     <div className="inline-flex border border-line rounded-md overflow-hidden">
       {options.map((opt) => (
         <button
-          key={opt}
-          onClick={() => onChange(opt)}
+          key={opt.id}
+          onClick={() => onChange(opt.id)}
           className={clsx(
             "px-3 py-1.5 text-xs transition-colors",
-            value === opt
+            value === opt.id
               ? "bg-cardAlt text-ink font-medium"
               : "text-ink2 hover:bg-cardAlt/50",
           )}
         >
-          {opt}
+          {labelOf(opt)}
         </button>
       ))}
     </div>
