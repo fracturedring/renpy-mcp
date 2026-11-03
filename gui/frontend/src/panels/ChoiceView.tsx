@@ -16,22 +16,28 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, AlertCircle, Pencil } from "lucide-react";
 import { api } from "@/api/client";
 import type { ChoiceBranch, ChoiceGraph, ChoiceRecord } from "@/api/types";
+import { useI18n } from "@/i18n";
 
 export function ChoiceView({
   onSelectLabel,
 }: {
   onSelectLabel: (name: string) => void;
 }) {
+  const { t } = useI18n();
   const choiceQ = useQuery({
     queryKey: ["choice-graph"],
     queryFn: () => api<ChoiceGraph>("/api/choice-graph"),
   });
 
   if (choiceQ.isLoading) {
-    return <div className="p-8 text-sm text-ink3">Loading choice graph…</div>;
+    return <div className="p-8 text-sm text-ink3">{t("story.choice.loading")}</div>;
   }
   if (choiceQ.error) {
-    return <div className="p-8 text-sm text-rose-600">Error: {String(choiceQ.error)}</div>;
+    return (
+      <div className="p-8 text-sm text-rose-600">
+        {t("common.error")}: {String(choiceQ.error)}
+      </div>
+    );
   }
   if (!choiceQ.data || choiceQ.data.count === 0) {
     return <EmptyChoiceView />;
@@ -42,12 +48,13 @@ export function ChoiceView({
       <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
         <header className="border-b border-line pb-3">
           <span className="text-[10px] uppercase tracking-wide text-ink3 font-mono">
-            Player perspective
+            {t("story.choice.perspective")}
           </span>
-          <h1 className="font-serif text-2xl text-ink mt-1">Choice View</h1>
+          <h1 className="font-serif text-2xl text-ink mt-1">{t("story.choice.title")}</h1>
           <p className="text-xs text-ink3 mt-1">
-            {choiceQ.data.count} menu{choiceQ.data.count === 1 ? "" : "s"} across the
-            project · click a target to open it in the Inspector
+            {choiceQ.data.count === 1
+              ? t("story.choice.summaryOne", { count: choiceQ.data.count })
+              : t("story.choice.summaryMany", { count: choiceQ.data.count })}
           </p>
         </header>
 
@@ -73,13 +80,14 @@ function ChoiceCard({
   file: string;
   onSelectLabel: (name: string) => void;
 }) {
+  const { t } = useI18n();
   return (
     <article className="bg-card border border-line rounded-lg shadow-sm overflow-hidden">
       <header className="px-4 py-2.5 border-b border-line bg-cardAlt/40 flex items-baseline justify-between">
         <button
           onClick={() => onSelectLabel(choice.label)}
           className="font-serif text-base text-ink hover:underline text-left"
-          title={`Open ${choice.label} in the Inspector`}
+          title={t("story.choice.openInInspector", { label: choice.label })}
         >
           {choice.label}
         </button>
@@ -101,9 +109,9 @@ function ChoiceCard({
                   background: "var(--rp-card-2)",
                   color: "var(--rp-accent)",
                 }}
-                title={`if ${branch.condition}`}
+                title={t("story.choice.condition", { condition: branch.condition })}
               >
-                if {branch.condition}
+                {t("story.choice.condition", { condition: branch.condition })}
               </span>
             )}
             <ArrowRight className="w-4 h-4 text-ink3 mt-1 shrink-0" />
@@ -111,19 +119,19 @@ function ChoiceCard({
               <button
                 onClick={() => onSelectLabel(branch.target!)}
                 className="font-mono text-sm text-ink hover:underline"
-                title={`Open ${branch.target} in the Inspector`}
+                title={t("story.choice.openInInspector", { label: branch.target })}
               >
                 {branch.target}
               </button>
             ) : (
               <span className="font-mono text-xs text-ink3 italic inline-flex items-center gap-1">
                 <AlertCircle className="w-3.5 h-3.5" />
-                no jump (branch has no clear target)
+                {t("story.choice.noJump")}
               </span>
             )}
             {branch.target_kind === "call" && (
               <span className="text-[10px] font-mono text-ink3 ml-auto">
-                via call
+                {t("story.choice.viaCall")}
               </span>
             )}
           </li>
@@ -134,6 +142,7 @@ function ChoiceCard({
 }
 
 function ChoicePill({ branch, file }: { branch: ChoiceBranch; file: string }) {
+  const { t } = useI18n();
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(branch.text);
@@ -153,7 +162,7 @@ function ChoicePill({ branch, file }: { branch: ChoiceBranch; file: string }) {
   const submit = useMutation({
     mutationFn: async () => {
       const trimmed = draft.trim();
-      if (!trimmed) throw new Error("text cannot be empty");
+      if (!trimmed) throw new Error(t("story.choice.emptyText"));
       if (trimmed === branch.text) {
         setEditing(false);
         return;
@@ -203,7 +212,7 @@ function ChoicePill({ branch, file }: { branch: ChoiceBranch; file: string }) {
           disabled={submit.isPending || !draft.trim()}
           className="text-[10px] font-mono text-ink3 hover:text-ink disabled:opacity-50"
         >
-          {submit.isPending ? "…" : "save"}
+          {submit.isPending ? "…" : t("common.save")}
         </button>
         <button
           type="button"
@@ -214,7 +223,7 @@ function ChoicePill({ branch, file }: { branch: ChoiceBranch; file: string }) {
           }}
           className="text-[10px] font-mono text-ink3 hover:text-ink"
         >
-          cancel
+          {t("common.cancel")}
         </button>
         {error && <span className="text-[10px] text-rose-600">{error}</span>}
       </span>
@@ -227,7 +236,7 @@ function ChoicePill({ branch, file }: { branch: ChoiceBranch; file: string }) {
       onClick={() => setEditing(true)}
       className="group inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs hover:ring-1 hover:ring-line"
       style={{ background: "var(--rp-card-2)", color: "var(--rp-ink-2)" }}
-      title="Edit choice text"
+      title={t("story.choice.editTitle")}
     >
       <span>"{branch.text}"</span>
       <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-60" />
@@ -236,11 +245,14 @@ function ChoicePill({ branch, file }: { branch: ChoiceBranch; file: string }) {
 }
 
 function EmptyChoiceView() {
+  const { t } = useI18n();
   return (
     <div className="w-full h-full flex flex-col items-center justify-center text-ink3 text-sm">
-      <p className="font-serif text-base">No choices in this project yet.</p>
+      <p className="font-serif text-base">{t("story.choice.empty")}</p>
       <p className="text-xs mt-2">
-        Add a <code className="font-mono">menu:</code> to a label and they'll show up here.
+        {t("story.choice.emptyHintPrefix")}
+        <code className="font-mono">menu:</code>
+        {t("story.choice.emptyHintSuffix")}
       </p>
     </div>
   );

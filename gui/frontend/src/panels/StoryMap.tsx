@@ -24,6 +24,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, MinusCircle, GitBranch, FlagOff, Trash2 } from "lucide-react";
 import { api } from "@/api/client";
 import { usePrefs } from "@/lib/usePrefs";
+import { useI18n, type I18n } from "@/i18n";
 import type {
   BranchGraph,
   BranchGraphEdge,
@@ -60,6 +61,7 @@ export function StoryMap({
   selectedLabel: string | null;
   onSelectLabel: (name: string | null) => void;
 }) {
+  const { t } = useI18n();
   const { prefs } = usePrefs();
   const dims = DENSITY[prefs.density] ?? DENSITY.regular;
   const qc = useQueryClient();
@@ -143,7 +145,11 @@ export function StoryMap({
 
   const handleApiResult = (data: { error?: string; references?: unknown }) => {
     if (data?.error) {
-      const refs = Array.isArray(data.references) ? ` (${data.references.length} reference(s))` : "";
+      const refs = Array.isArray(data.references)
+        ? data.references.length === 1
+          ? t("story.map.referencesOne", { count: data.references.length })
+          : t("story.map.referencesMany", { count: data.references.length })
+        : "";
       setError(data.error + refs);
       return false;
     }
@@ -163,6 +169,8 @@ export function StoryMap({
 
   const addChoice = useMutation({
     mutationFn: async () => {
+      // Label ids and the starter .rpy menu text are project data, so the
+      // prefixes and the placeholder choice text stay untranslated.
       const name = uniqueName("choice", nodes);
       const created = await api<{ error?: string }>(
         `/api/labels/${encodeURIComponent(name)}`,
@@ -189,7 +197,7 @@ export function StoryMap({
 
   const deleteSelected = useMutation({
     mutationFn: async () => {
-      if (!selectedLabel) return { error: "nothing selected" } as const;
+      if (!selectedLabel) return { error: t("story.map.nothingSelected") } as const;
       return await api<{ error?: string; references?: unknown }>(
         `/api/labels/${encodeURIComponent(selectedLabel)}`,
         { method: "DELETE" },
@@ -317,8 +325,10 @@ export function StoryMap({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Backspace" && e.key !== "Delete") return;
-      const t = e.target as HTMLElement | null;
-      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+      const el = e.target as HTMLElement | null;
+      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)) {
+        return;
+      }
       if (!selectedLabel) return;
       e.preventDefault();
       deleteSelected.mutate();
@@ -328,10 +338,14 @@ export function StoryMap({
   }, [selectedLabel, deleteSelected]);
 
   if (graph.isLoading || positionsQ.isLoading) {
-    return <div className="p-8 text-sm text-ink3">Loading project graph…</div>;
+    return <div className="p-8 text-sm text-ink3">{t("story.map.loading")}</div>;
   }
   if (graph.error) {
-    return <div className="p-8 text-sm text-rose-600">Error: {String(graph.error)}</div>;
+    return (
+      <div className="p-8 text-sm text-rose-600">
+        {t("common.error")}: {String(graph.error)}
+      </div>
+    );
   }
   if (nodes.length === 0) {
     return <EmptyShell onAddScene={() => addScene.mutate()} error={error} setError={setError} />;
@@ -450,6 +464,8 @@ function computeBounds(nodes: NodeRender[]) {
   return { W: maxX - minX, H: maxY - minY, minX, minY };
 }
 
+// Label ids are project data: the `scene_1` / `choice_2` / `ending_3`
+// prefixes stay untranslated so generated labels stay readable in .rpy.
 function uniqueName(prefix: string, nodes: NodeRender[]): string {
   let i = 1;
   const existing = new Set(nodes.map((n) => n.id));
@@ -478,6 +494,7 @@ function NodeCard({
   onClick: (e: React.MouseEvent) => void;
   onStartConnect: (e: React.MouseEvent) => void;
 }) {
+  const { t } = useI18n();
   const left = node.x - bounds.minX - dims.nodeW / 2;
   const top = node.y - bounds.minY - dims.nodeH / 2;
   const kind = (node.kind ?? "scene") as LabelKind;
@@ -512,7 +529,7 @@ function NodeCard({
       }}
     >
       <span className="text-[10px] uppercase tracking-wide font-mono text-ink3">
-        {kindLabel(kind)}
+        {kindLabel(kind, t)}
       </span>
       <span
         className="font-serif leading-tight truncate w-full"
@@ -524,7 +541,7 @@ function NodeCard({
         className="flex justify-between w-full text-ink3 font-mono"
         style={{ fontSize: dims.fontMeta }}
       >
-        <span>{node.say_count} lines</span>
+        <span>{t("story.map.lines", { count: node.say_count })}</span>
         <span className="truncate ml-2">{filename}</span>
       </span>
 
@@ -536,7 +553,7 @@ function NodeCard({
             e.preventDefault();
             onStartConnect(e);
           }}
-          title="Drag to another node to connect"
+          title={t("story.map.portTitle")}
           className="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-line bg-card hover:scale-110 transition-transform flex items-center justify-center text-[10px] text-ink3 hover:text-ink"
           style={{
             color: "var(--rp-accent)",
@@ -549,11 +566,11 @@ function NodeCard({
   );
 }
 
-function kindLabel(kind: LabelKind): string {
-  if (kind === "start") return "◉ start";
-  if (kind === "ending") return "▣ ending";
-  if (kind === "choice") return "◇ choice";
-  return "— scene";
+function kindLabel(kind: LabelKind, t: I18n["t"]): string {
+  if (kind === "start") return t("story.kind.start");
+  if (kind === "ending") return t("story.kind.ending");
+  if (kind === "choice") return t("story.kind.choice");
+  return t("story.kind.scene");
 }
 
 function kindBorderColor(kind: LabelKind): string {
@@ -681,40 +698,41 @@ function Toolbar({
   canDelete: boolean;
   busy: boolean;
 }) {
+  const { t } = useI18n();
   return (
     <div className="absolute top-3 left-3 flex items-center gap-1 px-2 py-1 rounded-md bg-card border border-line text-ink2 text-xs shadow-sm">
       <button
         className="inline-flex items-center gap-1 px-2 py-1 rounded hover:bg-cardAlt text-ink2 hover:text-ink disabled:opacity-50"
         onClick={onAddScene}
         disabled={busy}
-        title="Add a new scene label"
+        title={t("story.map.addSceneTitle")}
       >
-        <Plus className="w-3.5 h-3.5" /> Scene
+        <Plus className="w-3.5 h-3.5" /> {t("story.map.addScene")}
       </button>
       <button
         className="inline-flex items-center gap-1 px-2 py-1 rounded hover:bg-cardAlt text-ink2 hover:text-ink disabled:opacity-50"
         onClick={onAddChoice}
         disabled={busy}
-        title="Add a new choice label (label + starter menu)"
+        title={t("story.map.addChoiceTitle")}
       >
-        <GitBranch className="w-3.5 h-3.5" /> Choice
+        <GitBranch className="w-3.5 h-3.5" /> {t("story.map.addChoice")}
       </button>
       <button
         className="inline-flex items-center gap-1 px-2 py-1 rounded hover:bg-cardAlt text-ink2 hover:text-ink disabled:opacity-50"
         onClick={onAddEnding}
         disabled={busy}
-        title="Add a new ending label"
+        title={t("story.map.addEndingTitle")}
       >
-        <FlagOff className="w-3.5 h-3.5" /> Ending
+        <FlagOff className="w-3.5 h-3.5" /> {t("story.map.addEnding")}
       </button>
       <span className="w-px h-4 bg-line mx-1" />
       <button
         className="inline-flex items-center gap-1 px-2 py-1 rounded hover:bg-rose-50 text-rose-600 disabled:opacity-40 disabled:cursor-not-allowed"
         onClick={onDelete}
         disabled={!canDelete || busy}
-        title="Delete the selected label (Backspace)"
+        title={t("story.map.deleteTitle")}
       >
-        <Trash2 className="w-3.5 h-3.5" /> Delete
+        <Trash2 className="w-3.5 h-3.5" /> {t("story.map.delete")}
       </button>
     </div>
   );
@@ -733,6 +751,7 @@ function Chrome({
   setPan: (p: { x: number; y: number }) => void;
   containerRef: React.RefObject<HTMLDivElement>;
 }) {
+  const { t } = useI18n();
   const fit = () => {
     if (!containerRef.current) return;
     const r = containerRef.current.getBoundingClientRect();
@@ -745,37 +764,38 @@ function Chrome({
   };
   return (
     <div className="absolute bottom-3 left-3 flex items-center gap-1 px-2 py-1 rounded-md bg-card border border-line text-ink2 text-xs font-mono shadow-sm">
-      <button className="px-1.5 hover:text-ink" onClick={() => setZoom(Math.min(2.2, zoom * 1.15))} title="Zoom in">+</button>
-      <button className="px-1.5 hover:text-ink" onClick={() => setZoom(Math.max(0.3, zoom / 1.15))} title="Zoom out">−</button>
-      <button className="px-1.5 hover:text-ink" onClick={fit} title="Fit to view">⊡</button>
+      <button className="px-1.5 hover:text-ink" onClick={() => setZoom(Math.min(2.2, zoom * 1.15))} title={t("story.map.zoomIn")}>+</button>
+      <button className="px-1.5 hover:text-ink" onClick={() => setZoom(Math.max(0.3, zoom / 1.15))} title={t("story.map.zoomOut")}>−</button>
+      <button className="px-1.5 hover:text-ink" onClick={fit} title={t("story.map.fit")}>⊡</button>
       <span className="ml-1 text-ink3">{Math.round(zoom * 100)}%</span>
     </div>
   );
 }
 
 function Legend() {
+  const { t } = useI18n();
   return (
     <div className="absolute bottom-3 right-3 flex items-center gap-3 px-3 py-1.5 rounded-md bg-card border border-line text-ink3 text-[11px] font-mono shadow-sm">
       <span className="flex items-center gap-1.5">
         <span className="w-2 h-2 rounded-sm" style={{ background: "var(--rp-accent)" }} />
-        start
+        {t("story.legend.start")}
       </span>
       <span className="flex items-center gap-1.5">
         <span className="w-2 h-2 rounded-sm" style={{ background: "var(--rp-line)" }} />
-        scene
+        {t("story.legend.scene")}
       </span>
       <span className="flex items-center gap-1.5">
         <span className="w-2 h-2 rounded-sm" style={{ background: "var(--rp-recent)" }} />
-        choice
+        {t("story.legend.choice")}
       </span>
       <span className="flex items-center gap-1.5">
         <span className="w-2 h-2 rounded-sm bg-cardAlt" />
-        ending
+        {t("story.legend.ending")}
       </span>
       <span className="text-ink3/60">·</span>
       <span className="flex items-center gap-1.5">
         <span className="w-3 h-px bg-ink3" />
-        jump
+        {t("story.legend.jump")}
       </span>
       <span className="flex items-center gap-1.5">
         <span
@@ -785,13 +805,14 @@ function Legend() {
               "repeating-linear-gradient(to right, var(--rp-accent) 0 4px, transparent 4px 8px)",
           }}
         />
-        call
+        {t("story.legend.call")}
       </span>
     </div>
   );
 }
 
 function Hint({ connecting }: { connecting: boolean }) {
+  const { t } = useI18n();
   return (
     <div
       className={[
@@ -799,7 +820,7 @@ function Hint({ connecting }: { connecting: boolean }) {
         connecting ? "opacity-100" : "opacity-0",
       ].join(" ")}
     >
-      release on a node to connect
+      {t("story.map.connectHint")}
     </div>
   );
 }
@@ -811,12 +832,13 @@ function ErrorBanner({
   message: string;
   onDismiss: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <div className="absolute bottom-16 left-1/2 -translate-x-1/2 px-3 py-2 rounded-md bg-rose-600 text-white text-xs shadow-lg flex items-center gap-2 max-w-xl">
       <MinusCircle className="w-4 h-4 shrink-0" />
       <span className="truncate">{message}</span>
       <button onClick={onDismiss} className="ml-2 underline opacity-80 hover:opacity-100 shrink-0">
-        dismiss
+        {t("story.map.dismiss")}
       </button>
     </div>
   );
@@ -831,15 +853,16 @@ function EmptyShell({
   error: string | null;
   setError: (e: string | null) => void;
 }) {
+  const { t } = useI18n();
   return (
     <div className="w-full h-full flex flex-col items-center justify-center bg-canvas text-ink3 text-sm">
-      <p className="mb-3">No labels found in this project.</p>
+      <p className="mb-3">{t("story.map.empty")}</p>
       <button
         onClick={onAddScene}
         className="px-3 py-1.5 rounded-md text-white text-sm"
         style={{ background: "var(--rp-accent)" }}
       >
-        + Add a starting scene
+        {t("story.map.addStartingScene")}
       </button>
       {error && (
         <div className="mt-4">

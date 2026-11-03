@@ -44,6 +44,7 @@ import type {
   LabelTree,
   LabelTreeNode,
 } from "@/api/types";
+import { useI18n, type MessageKey } from "@/i18n";
 
 interface InspectorProps {
   name: string;
@@ -51,6 +52,7 @@ interface InspectorProps {
 }
 
 export function SceneInspector({ name, onClose }: InspectorProps) {
+  const { t } = useI18n();
   const treeQ = useQuery({
     queryKey: ["label-tree", name],
     queryFn: () => api<LabelTree>(`/api/labels/${encodeURIComponent(name)}/tree`),
@@ -65,49 +67,53 @@ export function SceneInspector({ name, onClose }: InspectorProps) {
       <header className="px-5 py-3 border-b border-line flex items-center justify-between">
         <div className="min-w-0">
           <div className="text-[10px] uppercase tracking-wide text-ink3">
-            {treeQ.data ? treeQ.data.kind : "Scene"}
+            {treeQ.data ? treeQ.data.kind : t("inspector.kindFallback")}
           </div>
           <h2 className="font-serif text-base truncate">{name}</h2>
         </div>
         <button
           onClick={onClose}
           className="p-1 text-ink3 hover:text-ink"
-          title="Close inspector"
+          title={t("inspector.closeInspector")}
         >
           <X className="w-4 h-4" />
         </button>
       </header>
 
       <div className="flex-1 overflow-auto px-5 py-4 space-y-5 text-sm">
-        {treeQ.isLoading && <p className="text-ink3">Loading scene…</p>}
+        {treeQ.isLoading && <p className="text-ink3">{t("inspector.loadingScene")}</p>}
         {treeQ.error && (
-          <p className="text-rose-600">Error: {String(treeQ.error)}</p>
+          <p className="text-rose-600">
+            {t("inspector.errorPrefix", { message: String(treeQ.error) })}
+          </p>
         )}
 
         {treeQ.data && (
           <>
-            <Section icon={<Image className="w-4 h-4" />} title="Background">
+            <Section icon={<Image className="w-4 h-4" />} title={t("inspector.background")}>
               <BackgroundField labelName={name} current={treeQ.data.shorthand.background} />
             </Section>
 
-            <Section icon={<Music className="w-4 h-4" />} title="Music">
+            <Section icon={<Music className="w-4 h-4" />} title={t("inspector.music")}>
               <MusicField labelName={name} current={treeQ.data.shorthand.music} />
             </Section>
 
             <Section
               icon={<ChevronRight className="w-4 h-4" />}
-              title={`Outgoing (${treeQ.data.shorthand.outgoing_targets.length})`}
+              title={t("inspector.outgoing", {
+                count: treeQ.data.shorthand.outgoing_targets.length,
+              })}
             >
               {treeQ.data.shorthand.outgoing_targets.length === 0 ? (
                 <p className="text-ink3 text-xs">
                   {treeQ.data.shorthand.ends_with_return
-                    ? "Ends with `return`."
-                    : "No outgoing jumps."}
+                    ? t("inspector.endsWithReturn")
+                    : t("inspector.noOutgoing")}
                 </p>
               ) : (
                 <ul className="space-y-1 text-xs font-mono text-ink2">
-                  {treeQ.data.shorthand.outgoing_targets.map((t) => (
-                    <li key={t}>→ {t}</li>
+                  {treeQ.data.shorthand.outgoing_targets.map((tgt) => (
+                    <li key={tgt}>→ {tgt}</li>
                   ))}
                 </ul>
               )}
@@ -115,7 +121,7 @@ export function SceneInspector({ name, onClose }: InspectorProps) {
 
             <Section
               icon={<MessageSquare className="w-4 h-4" />}
-              title={`Body (${treeQ.data.body.length})`}
+              title={t("inspector.body", { count: treeQ.data.body.length })}
             >
               <EventStream nodes={treeQ.data.body} />
               <AddDialogueForm
@@ -128,13 +134,9 @@ export function SceneInspector({ name, onClose }: InspectorProps) {
             {treeQ.data.unparsed.length > 0 && (
               <Section
                 icon={<AlertTriangle className="w-4 h-4 text-amber-500" />}
-                title={`Unparsed (${treeQ.data.unparsed.length})`}
+                title={t("inspector.unparsed", { count: treeQ.data.unparsed.length })}
               >
-                <p className="text-xs text-ink3 mb-2">
-                  These lines weren't recognized by the parser. Edit with the
-                  renpy-mcp tools or a text editor — the GUI will not
-                  modify them.
-                </p>
+                <p className="text-xs text-ink3 mb-2">{t("inspector.unparsedHint")}</p>
                 <ul className="space-y-1 font-mono text-[11px] text-ink3">
                   {treeQ.data.unparsed.map((u) => (
                     <li key={u.line}>
@@ -179,6 +181,7 @@ function Section({
 // ---------- existing edit forms (background / music / dialogue) -------------
 
 function MusicField({ labelName, current }: { labelName: string; current: string | null }) {
+  const { t } = useI18n();
   const qc = useQueryClient();
   const [draft, setDraft] = useState(current ?? "");
   const [loop, setLoop] = useState(true);
@@ -214,12 +217,12 @@ function MusicField({ labelName, current }: { labelName: string; current: string
           setDraft(e.target.value);
           setError(null);
         }}
-        placeholder="audio/spring_theme.ogg (or empty for stop music)"
+        placeholder={t("inspector.musicPlaceholder")}
         className="w-full px-2 py-1.5 border border-line rounded text-xs font-mono bg-card text-ink"
       />
       <label className="flex items-center gap-1.5 text-xs text-ink2">
         <input type="checkbox" checked={loop} onChange={(e) => setLoop(e.target.checked)} />
-        loop
+        {t("inspector.loop")}
       </label>
       {error && <div className="text-xs text-rose-600">{error}</div>}
       {dirty && (
@@ -230,10 +233,10 @@ function MusicField({ labelName, current }: { labelName: string; current: string
           style={{ background: "var(--rp-accent)" }}
         >
           {setMusic.isPending
-            ? "Saving…"
+            ? t("common.saving")
             : draft.trim() === ""
-              ? "Stop music"
-              : "Set music"}
+              ? t("inspector.stopMusic")
+              : t("inspector.setMusic")}
         </button>
       )}
     </div>
@@ -241,6 +244,7 @@ function MusicField({ labelName, current }: { labelName: string; current: string
 }
 
 function BackgroundField({ labelName, current }: { labelName: string; current: string | null }) {
+  const { t } = useI18n();
   const qc = useQueryClient();
   const [draft, setDraft] = useState(current ?? "");
   const [error, setError] = useState<string | null>(null);
@@ -264,12 +268,7 @@ function BackgroundField({ labelName, current }: { labelName: string; current: s
   });
 
   if (current === null && !dirty) {
-    return (
-      <p className="text-xs text-ink3">
-        No `scene` line — this label doesn't set a background. Edit via tools
-        for now.
-      </p>
-    );
+    return <p className="text-xs text-ink3">{t("inspector.noSceneLine")}</p>;
   }
   return (
     <div className="space-y-1.5">
@@ -291,7 +290,7 @@ function BackgroundField({ labelName, current }: { labelName: string; current: s
           className="px-2 py-1 text-xs rounded text-white disabled:opacity-50"
           style={{ background: "var(--rp-accent)" }}
         >
-          {swap.isPending ? "Saving…" : "Swap background"}
+          {swap.isPending ? t("common.saving") : t("inspector.swapBackground")}
         </button>
       )}
     </div>
@@ -305,6 +304,7 @@ function AddDialogueForm({
   labelName: string;
   characters: CharacterInfo[];
 }) {
+  const { t } = useI18n();
   const qc = useQueryClient();
   const [character, setCharacter] = useState<string>("");
   const [text, setText] = useState<string>("");
@@ -337,7 +337,7 @@ function AddDialogueForm({
           onChange={(e) => setCharacter(e.target.value)}
           className="px-2 py-1.5 border border-line rounded text-xs font-mono w-24 bg-card text-ink"
         >
-          <option value="">(narration)</option>
+          <option value="">{t("inspector.narration")}</option>
           {characters.map((c) => (
             <option key={c.var} value={c.var}>
               {c.var}
@@ -351,7 +351,7 @@ function AddDialogueForm({
             setText(e.target.value);
             setError(null);
           }}
-          placeholder="Add a dialogue line…"
+          placeholder={t("inspector.dialoguePlaceholder")}
           className="flex-1 px-2 py-1.5 border border-line rounded text-xs bg-card text-ink"
           onKeyDown={(e) => {
             if (e.key === "Enter" && text.trim() && !append.isPending) append.mutate();
@@ -365,7 +365,8 @@ function AddDialogueForm({
         className="px-2 py-1 text-xs rounded text-white disabled:opacity-40 inline-flex items-center gap-1"
         style={{ background: "var(--rp-ink)" }}
       >
-        <Plus className="w-3 h-3" /> {append.isPending ? "Adding…" : "Add line"}
+        <Plus className="w-3 h-3" />{" "}
+        {append.isPending ? t("inspector.adding") : t("inspector.addLine")}
       </button>
     </div>
   );
@@ -374,8 +375,9 @@ function AddDialogueForm({
 // ---------- event stream rendering ------------------------------------------
 
 function EventStream({ nodes }: { nodes: LabelTreeNode[] }) {
+  const { t } = useI18n();
   if (nodes.length === 0) {
-    return <p className="text-xs text-ink3">No body yet.</p>;
+    return <p className="text-xs text-ink3">{t("inspector.noBody")}</p>;
   }
   return (
     <ol className="space-y-1.5 mb-3">
@@ -401,6 +403,7 @@ function EventCard({ node }: { node: LabelTreeNode }) {
 }
 
 function KindBadge({ kind }: { kind: LabelTreeNode["kind"] }) {
+  // These are Ren'Py keywords, not UI chrome — identical in every locale.
   const labels: Record<LabelTreeNode["kind"], string> = {
     say: "say",
     scene: "scene",
@@ -428,6 +431,7 @@ function KindBadge({ kind }: { kind: LabelTreeNode["kind"] }) {
 }
 
 function EventBody({ node }: { node: LabelTreeNode }) {
+  const { t } = useI18n();
   switch (node.kind) {
     case "say":
       return (
@@ -435,7 +439,9 @@ function EventBody({ node }: { node: LabelTreeNode }) {
           {node.character ? (
             <span className="font-mono font-semibold text-ink">{node.character} </span>
           ) : (
-            <span className="font-mono italic text-ink3">narration </span>
+            <span className="font-mono italic text-ink3">
+              {t("inspector.narrationLabel")}{" "}
+            </span>
           )}
           <span className="text-ink2">"{node.text}"</span>
         </span>
@@ -458,7 +464,11 @@ function EventBody({ node }: { node: LabelTreeNode }) {
         </span>
       );
     case "pause":
-      return <span className="font-mono text-ink2">{node.duration ?? "(no arg)"}</span>;
+      return (
+        <span className="font-mono text-ink2">
+          {node.duration ?? t("inspector.noArg")}
+        </span>
+      );
     case "jump":
       return <span className="font-mono text-ink2">{node.target}</span>;
     case "call":
@@ -476,13 +486,23 @@ function EventBody({ node }: { node: LabelTreeNode }) {
     case "menu":
       return (
         <span className="text-ink2">
-          {node.choices.length} choice{node.choices.length === 1 ? "" : "s"}
+          {t(
+            node.choices.length === 1
+              ? "inspector.choiceCountOne"
+              : "inspector.choiceCountMany",
+            { count: node.choices.length },
+          )}
         </span>
       );
     case "if":
       return (
         <span className="text-ink2">
-          {node.branches.length} branch{node.branches.length === 1 ? "" : "es"}
+          {t(
+            node.branches.length === 1
+              ? "inspector.branchCountOne"
+              : "inspector.branchCountMany",
+            { count: node.branches.length },
+          )}
         </span>
       );
   }
@@ -491,18 +511,19 @@ function EventBody({ node }: { node: LabelTreeNode }) {
 // ---------- insert-event UI for the new tools -------------------------------
 
 const INSERT_OPTIONS = [
-  { id: "pause", label: "Pause / beat", icon: Timer },
-  { id: "setvar", label: "Set variable", icon: Variable },
-  { id: "show", label: "Show / move character", icon: Image },
-  { id: "with", label: "With effect", icon: Wand2 },
-  { id: "flash", label: "Color flash", icon: Zap },
-  { id: "stage", label: "Stage (multi-sprite)", icon: Layers },
-  { id: "menu", label: "Menu / choices", icon: GitBranch },
-] as const;
+  { id: "pause", label: "inspector.insert.pause", icon: Timer },
+  { id: "setvar", label: "inspector.insert.setvar", icon: Variable },
+  { id: "show", label: "inspector.insert.show", icon: Image },
+  { id: "with", label: "inspector.insert.with", icon: Wand2 },
+  { id: "flash", label: "inspector.insert.flash", icon: Zap },
+  { id: "stage", label: "inspector.insert.stage", icon: Layers },
+  { id: "menu", label: "inspector.insert.menu", icon: GitBranch },
+] as const satisfies readonly { id: string; label: MessageKey; icon: unknown }[];
 
 type InsertId = (typeof INSERT_OPTIONS)[number]["id"];
 
 function InsertEvent({ labelName }: { labelName: string }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState<InsertId | null>(null);
   const popupRef = useRef<HTMLDivElement>(null);
@@ -529,7 +550,7 @@ function InsertEvent({ labelName }: { labelName: string }) {
         className="w-full inline-flex items-center justify-center gap-1 px-2 py-1.5 text-xs rounded border border-dashed border-line text-ink3 hover:text-ink hover:border-line"
       >
         <Plus className="w-3 h-3" />
-        Insert event
+        {t("inspector.insertEvent")}
       </button>
       {open && !composerKind && (
         <div
@@ -545,7 +566,7 @@ function InsertEvent({ labelName }: { labelName: string }) {
                     className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-cardAlt text-left text-ink2 hover:text-ink"
                   >
                     <opt.icon className="w-3.5 h-3.5" />
-                    {opt.label}
+                    {t(opt.label)}
                   </button>
                 </li>
               ))}
@@ -583,6 +604,7 @@ function ComposerOverlay({
   kind: "stage" | "menu";
   onClose: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <div
       className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center pt-12 px-4"
@@ -594,12 +616,14 @@ function ComposerOverlay({
       >
         <div className="px-4 py-2 border-b border-line flex items-center justify-between bg-card">
           <span className="text-xs text-ink3 font-mono">
-            {kind === "stage" ? "Stage Composer" : "Menu Composer"}
+            {kind === "stage"
+              ? t("inspector.stageComposer")
+              : t("inspector.menuComposer")}
           </span>
           <button
             onClick={onClose}
             className="text-xs text-ink3 hover:text-ink"
-            aria-label="Close composer"
+            aria-label={t("inspector.closeComposer")}
           >
             ✕
           </button>
@@ -623,6 +647,7 @@ function InsertForm({
   onClose: () => void;
   onBack: () => void;
 }) {
+  const { t } = useI18n();
   const qc = useQueryClient();
   const [error, setError] = useState<string | null>(null);
 
@@ -652,12 +677,12 @@ function InsertForm({
           onClick={onBack}
           className="text-[10px] text-ink3 hover:text-ink uppercase tracking-wide font-mono"
         >
-          ← back
+          ← {t("common.back")}
         </button>
         <button
           onClick={onClose}
           className="text-[10px] text-ink3 hover:text-ink"
-          aria-label="Close"
+          aria-label={t("common.close")}
         >
           ✕
         </button>
@@ -689,10 +714,11 @@ function PauseForm({
   onSubmit: (body: Record<string, unknown>) => void;
   pending: boolean;
 }) {
+  const { t } = useI18n();
   const [duration, setDuration] = useState("0.5");
   return (
     <div className="space-y-1.5">
-      <label className="text-ink3">Duration (s)</label>
+      <label className="text-ink3">{t("inspector.durationSeconds")}</label>
       <input
         type="number"
         step="0.05"
@@ -716,28 +742,31 @@ function SetvarForm({
   onSubmit: (body: Record<string, unknown>) => void;
   pending: boolean;
 }) {
+  const { t } = useI18n();
   const [name, setName] = useState("");
   const [value, setValue] = useState("");
   const [type, setType] = useState<"string" | "number" | "bool" | "null">("number");
   return (
     <div className="space-y-1.5">
-      <label className="text-ink3">Variable name</label>
+      <label className="text-ink3">{t("inspector.variableName")}</label>
       <input
         value={name}
         onChange={(e) => setName(e.target.value)}
         className="w-full px-2 py-1 border border-line rounded font-mono bg-card text-ink"
         placeholder="trust_mei"
       />
-      <label className="text-ink3">Value type</label>
+      <label className="text-ink3">{t("inspector.valueType")}</label>
       <select
         value={type}
         onChange={(e) => setType(e.target.value as typeof type)}
         className="w-full px-2 py-1 border border-line rounded font-mono bg-card text-ink"
       >
-        <option value="number">number</option>
-        <option value="string">string</option>
-        <option value="bool">boolean</option>
-        <option value="null">null</option>
+        {/* Option values are the wire enum the API expects; only the
+            visible labels are translated. */}
+        <option value="number">{t("inspector.valueTypeNumber")}</option>
+        <option value="string">{t("inspector.valueTypeString")}</option>
+        <option value="bool">{t("inspector.valueTypeBoolean")}</option>
+        <option value="null">{t("inspector.valueTypeNull")}</option>
       </select>
       {type !== "null" && (
         <input
@@ -768,34 +797,35 @@ function ShowForm({
   onSubmit: (body: Record<string, unknown>) => void;
   pending: boolean;
 }) {
+  const { t } = useI18n();
   const [tag, setTag] = useState("");
   const [expression, setExpression] = useState("");
   const [position, setPosition] = useState("");
   const [transition, setTransition] = useState("");
   return (
     <div className="space-y-1.5">
-      <label className="text-ink3">Image tag</label>
+      <label className="text-ink3">{t("inspector.imageTag")}</label>
       <input
         value={tag}
         onChange={(e) => setTag(e.target.value)}
         className="w-full px-2 py-1 border border-line rounded font-mono bg-card text-ink"
         placeholder="eileen"
       />
-      <label className="text-ink3">Expression</label>
+      <label className="text-ink3">{t("inspector.expression")}</label>
       <input
         value={expression}
         onChange={(e) => setExpression(e.target.value)}
         className="w-full px-2 py-1 border border-line rounded font-mono bg-card text-ink"
         placeholder="happy"
       />
-      <label className="text-ink3">Position</label>
+      <label className="text-ink3">{t("inspector.position")}</label>
       <input
         value={position}
         onChange={(e) => setPosition(e.target.value)}
         className="w-full px-2 py-1 border border-line rounded font-mono bg-card text-ink"
         placeholder="left"
       />
-      <label className="text-ink3">Transition</label>
+      <label className="text-ink3">{t("inspector.transition")}</label>
       <input
         value={transition}
         onChange={(e) => setTransition(e.target.value)}
@@ -823,10 +853,11 @@ function WithForm({
   onSubmit: (body: Record<string, unknown>) => void;
   pending: boolean;
 }) {
+  const { t } = useI18n();
   const [expression, setExpression] = useState("hpunch");
   return (
     <div className="space-y-1.5">
-      <label className="text-ink3">Transition expression</label>
+      <label className="text-ink3">{t("inspector.transitionExpression")}</label>
       <input
         value={expression}
         onChange={(e) => setExpression(e.target.value)}
@@ -848,11 +879,12 @@ function FlashForm({
   onSubmit: (body: Record<string, unknown>) => void;
   pending: boolean;
 }) {
+  const { t } = useI18n();
   const [color, setColor] = useState("#ffffff");
   const [duration, setDuration] = useState("0.25");
   return (
     <div className="space-y-1.5">
-      <label className="text-ink3">Color</label>
+      <label className="text-ink3">{t("inspector.color")}</label>
       <div className="flex gap-1.5 items-center">
         <input
           type="color"
@@ -866,7 +898,7 @@ function FlashForm({
           className="flex-1 px-2 py-1 border border-line rounded font-mono bg-card text-ink"
         />
       </div>
-      <label className="text-ink3">Duration (s)</label>
+      <label className="text-ink3">{t("inspector.durationSeconds")}</label>
       <input
         type="number"
         step="0.05"
@@ -884,6 +916,7 @@ function FlashForm({
 }
 
 function SubmitBtn({ pending, onClick }: { pending: boolean; onClick: () => void }) {
+  const { t } = useI18n();
   return (
     <button
       onClick={onClick}
@@ -891,7 +924,7 @@ function SubmitBtn({ pending, onClick }: { pending: boolean; onClick: () => void
       className="w-full px-2 py-1 text-xs rounded text-white disabled:opacity-50 mt-1"
       style={{ background: "var(--rp-accent)" }}
     >
-      {pending ? "Inserting…" : "Insert"}
+      {pending ? t("inspector.inserting") : t("inspector.insert")}
     </button>
   );
 }

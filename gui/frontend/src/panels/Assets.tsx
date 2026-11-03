@@ -3,17 +3,19 @@ import { useQuery } from "@tanstack/react-query";
 import { clsx } from "clsx";
 import { api } from "@/api/client";
 import type { AudioListing, ImageInfo } from "@/api/types";
+import { useI18n, type MessageKey } from "@/i18n";
 
 type Tab = "backgrounds" | "sprites" | "music" | "sfx";
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: "backgrounds", label: "Backgrounds" },
-  { id: "sprites", label: "Sprites" },
-  { id: "music", label: "Music" },
-  { id: "sfx", label: "Sound FX" },
+const TABS: { id: Tab; label: MessageKey }[] = [
+  { id: "backgrounds", label: "library.assets.backgrounds" },
+  { id: "sprites", label: "library.assets.sprites" },
+  { id: "music", label: "library.assets.music" },
+  { id: "sfx", label: "library.assets.sfx" },
 ];
 
 export function Assets() {
+  const { t } = useI18n();
   const [tab, setTab] = useState<Tab>("backgrounds");
   const images = useQuery({
     queryKey: ["images"],
@@ -27,22 +29,22 @@ export function Assets() {
   return (
     <div className="p-8 h-full overflow-auto">
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-semibold text-zinc-800">Assets</h1>
+        <h1 className="text-2xl font-semibold text-zinc-800">{t("library.assets.title")}</h1>
       </div>
 
       <div className="border-b border-zinc-200 mb-6 flex gap-1">
-        {TABS.map((t) => (
+        {TABS.map((item) => (
           <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
+            key={item.id}
+            onClick={() => setTab(item.id)}
             className={clsx(
               "px-3 py-2 text-sm border-b-2 -mb-px transition-colors",
-              tab === t.id
+              tab === item.id
                 ? "border-accent text-accent font-medium"
                 : "border-transparent text-zinc-500 hover:text-zinc-800",
             )}
           >
-            {t.label}
+            {t(item.label)}
           </button>
         ))}
       </div>
@@ -58,12 +60,21 @@ export function Assets() {
 }
 
 function ImageGrid({ images, kind }: { images: ImageInfo[]; kind: "backgrounds" | "sprites" }) {
+  const { t } = useI18n();
   // Heuristic: image names starting with `bg ` are backgrounds; everything else is a sprite.
   const filtered = images.filter((img) =>
     kind === "backgrounds" ? img.name.startsWith("bg ") : !img.name.startsWith("bg "),
   );
   if (filtered.length === 0) {
-    return <p className="text-sm text-zinc-500">No {kind} found in this project.</p>;
+    return (
+      <p className="text-sm text-zinc-500">
+        {t(
+          kind === "backgrounds"
+            ? "library.assets.emptyBackgrounds"
+            : "library.assets.emptySprites",
+        )}
+      </p>
+    );
   }
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
@@ -90,11 +101,16 @@ function ImageGrid({ images, kind }: { images: ImageInfo[]; kind: "backgrounds" 
 }
 
 function AudioGrid({ audio, kind }: { audio: AudioListing; kind: "music" | "sfx" }) {
+  const { t } = useI18n();
   // Crude split: assets in audio/ that look like music vs SFX by file name patterns.
   const isMusic = (path: string) => /theme|bgm|music/i.test(path) || path.endsWith(".ogg");
   const filtered = audio.files.filter((f) => (kind === "music" ? isMusic(f.asset_path) : !isMusic(f.asset_path)));
   if (filtered.length === 0) {
-    return <p className="text-sm text-zinc-500">No {kind} found in this project.</p>;
+    return (
+      <p className="text-sm text-zinc-500">
+        {t(kind === "music" ? "library.assets.emptyMusic" : "library.assets.emptySfx")}
+      </p>
+    );
   }
   return (
     <div className="space-y-2">
@@ -109,7 +125,11 @@ function AudioGrid({ audio, kind }: { audio: AudioListing; kind: "music" | "sfx"
               <div className="text-sm font-medium truncate font-mono">{f.asset_path}</div>
               <div className="text-xs text-zinc-500">
                 {(f.size_bytes / 1024).toFixed(1)} KB
-                {usedBy > 0 && ` · used in ${usedBy} place${usedBy === 1 ? "" : "s"}`}
+                {usedBy > 0 &&
+                  ` · ${t(
+                    usedBy === 1 ? "library.assets.usedIn" : "library.assets.usedInPlural",
+                    { count: usedBy },
+                  )}`}
               </div>
             </div>
           </div>

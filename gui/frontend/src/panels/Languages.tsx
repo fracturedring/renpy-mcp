@@ -19,8 +19,10 @@ import type {
   TranslationCoverage,
   TranslationCoverageRow,
 } from "@/api/types";
+import { useI18n } from "@/i18n";
 
 export function Languages() {
+  const { t } = useI18n();
   const qc = useQueryClient();
   const [selected, setSelected] = useState<string | null>(null);
   const [scaffoldName, setScaffoldName] = useState("");
@@ -61,7 +63,7 @@ export function Languages() {
         return;
       }
       if (typeof data.returncode === "number" && data.returncode !== 0) {
-        setError(data.stderr || `renpy.sh translate exited ${data.returncode}`);
+        setError(data.stderr || t("ship.languages.exited", { code: data.returncode }));
         return;
       }
       qc.invalidateQueries({ queryKey: ["translation-coverage"] });
@@ -77,28 +79,33 @@ export function Languages() {
       <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
         <header className="border-b border-line pb-3">
           <span className="text-[10px] uppercase tracking-wide text-ink3 font-mono">
-            Coverage
+            {t("ship.languages.eyebrow")}
           </span>
           <h1 className="font-serif text-2xl text-ink mt-1 flex items-center gap-2">
             <LanguagesIcon className="w-5 h-5" />
-            Languages
+            {t("ship.languages.heading")}
           </h1>
           <p className="text-xs text-ink3 mt-1">
-            Per-language translation progress, sourced from{" "}
-            <code className="font-mono">game/tl/&lt;lang&gt;/</code>.
+            {t("ship.languages.subtitlePre")}{" "}
+            <code className="font-mono">game/tl/&lt;lang&gt;/</code>
+            {t("ship.languages.subtitlePost")}
           </p>
         </header>
 
-        {coverageQ.isLoading && <p className="text-ink3 text-sm">Loading coverage…</p>}
+        {coverageQ.isLoading && (
+          <p className="text-ink3 text-sm">{t("ship.languages.loadingCoverage")}</p>
+        )}
         {coverageQ.error && (
-          <p className="text-rose-600 text-sm">Error: {String(coverageQ.error)}</p>
+          <p className="text-rose-600 text-sm">
+            {t("ship.errorLabel")} {String(coverageQ.error)}
+          </p>
         )}
 
         {coverageQ.data && coverageQ.data.languages.length === 0 && (
           <div className="bg-card border border-line rounded p-4 text-sm text-ink2">
             <p>
-              No translations exist yet. Add a language below to scaffold one via
-              Ren'Py's <code className="font-mono">translate</code> command.
+              {t("ship.languages.emptyPre")}{" "}
+              <code className="font-mono">translate</code> {t("ship.languages.emptyPost")}
             </p>
           </div>
         )}
@@ -123,7 +130,7 @@ export function Languages() {
           <input
             value={scaffoldName}
             onChange={(e) => setScaffoldName(e.target.value)}
-            placeholder="add language (e.g. spanish)"
+            placeholder={t("ship.languages.addPlaceholder")}
             className="flex-1 px-2 py-1 border border-line rounded text-xs font-mono bg-card text-ink"
           />
           <button
@@ -132,7 +139,9 @@ export function Languages() {
             className="px-3 py-1.5 rounded text-xs text-white disabled:opacity-50"
             style={{ background: "var(--rp-accent)" }}
           >
-            {scaffold.isPending ? "Scaffolding…" : "Scaffold"}
+            {scaffold.isPending
+              ? t("ship.languages.scaffolding")
+              : t("ship.languages.scaffold")}
           </button>
         </section>
 
@@ -146,18 +155,20 @@ export function Languages() {
           <section>
             <header className="flex items-baseline justify-between mb-2">
               <h2 className="font-serif text-base text-ink">
-                Stale strings · {selected}
+                {t("ship.languages.staleHeading", { language: selected })}
               </h2>
               <span className="text-[10px] font-mono text-ink3">
-                {staleQ.data?.count ?? 0} entries
+                {t(
+                  (staleQ.data?.count ?? 0) === 1
+                    ? "ship.languages.entry"
+                    : "ship.languages.entries",
+                  { count: staleQ.data?.count ?? 0 },
+                )}
               </span>
             </header>
-            {staleQ.isLoading && <p className="text-ink3 text-sm">Loading…</p>}
+            {staleQ.isLoading && <p className="text-ink3 text-sm">{t("common.loading")}</p>}
             {staleQ.data && staleQ.data.count === 0 && (
-              <p className="text-ink3 text-sm">
-                Nothing stale — every entry has a non-empty translation that differs
-                from its source.
-              </p>
+              <p className="text-ink3 text-sm">{t("ship.languages.staleEmpty")}</p>
             )}
             {staleQ.data && staleQ.data.count > 0 && (
               <ul className="bg-card border border-line rounded divide-y divide-line">
@@ -177,7 +188,9 @@ export function Languages() {
                       <div className="font-serif text-ink mt-1">"{entry.source}"</div>
                     )}
                     <div className="font-mono text-ink3 mt-0.5">
-                      {entry.target ? `→ "${entry.target}" (matches source)` : "→ (empty)"}
+                      {entry.target
+                        ? t("ship.languages.matchesSource", { text: entry.target })
+                        : t("ship.languages.targetEmpty")}
                     </div>
                   </li>
                 ))}
@@ -203,6 +216,7 @@ function CoverageRow({
   onRefresh: () => void;
   refreshing: boolean;
 }) {
+  const { t } = useI18n();
   return (
     <li>
       <div
@@ -235,7 +249,7 @@ function CoverageRow({
           }}
           disabled={refreshing}
           className="ml-1 p-1 text-ink3 hover:text-ink rounded disabled:opacity-50"
-          title="Re-run renpy.sh translate to refresh scaffolding"
+          title={t("ship.languages.rerunTitle")}
         >
           <RefreshCw className={refreshing ? "w-3.5 h-3.5 animate-spin" : "w-3.5 h-3.5"} />
         </button>

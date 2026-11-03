@@ -21,7 +21,10 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Layers, FileText, ImageIcon, GitBranch, Plus, X } from "lucide-react";
 import { api } from "@/api/client";
 import type { LabelInfo } from "@/api/types";
+import { useI18n } from "@/i18n";
 
+// Starter trees are project content: they land in the user's .rpy files
+// verbatim, so they are never translated.
 const SCREEN_LAYOUT_STARTER = `{
   "kind": "vbox",
   "props": { "xalign": 0.5, "spacing": 10 },
@@ -32,6 +35,7 @@ const SCREEN_LAYOUT_STARTER = `{
 }`;
 
 export function ScreenLayoutComposer() {
+  const { t } = useI18n();
   const [name, setName] = useState("");
   const [file, setFile] = useState("");
   const [tree, setTree] = useState(SCREEN_LAYOUT_STARTER);
@@ -50,7 +54,9 @@ export function ScreenLayoutComposer() {
       try {
         parsed = JSON.parse(tree);
       } catch (exc) {
-        throw new Error(`tree JSON is invalid: ${(exc as Error).message}`);
+        throw new Error(
+          t("inspector.treeJsonInvalid", { message: (exc as Error).message }),
+        );
       }
       const body: Record<string, unknown> = { name, root: parsed };
       if (file.trim()) body.file = file.trim();
@@ -73,7 +79,9 @@ export function ScreenLayoutComposer() {
     <section className="bg-card border border-line rounded-lg overflow-hidden">
       <header className="px-4 py-3 border-b border-line bg-cardAlt/40 flex items-baseline gap-2">
         <FileText className="w-4 h-4 text-ink3" />
-        <h2 className="font-serif text-base text-ink">Screen Layout Composer</h2>
+        <h2 className="font-serif text-base text-ink">
+          {t("inspector.screenLayoutComposer")}
+        </h2>
         <span className="text-[10px] font-mono text-ink3 ml-auto">
           add_screen_layout
         </span>
@@ -81,7 +89,9 @@ export function ScreenLayoutComposer() {
       <div className="p-4 space-y-3">
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
-            <span className="text-xs text-ink3 mb-1 inline-block">Screen name</span>
+            <span className="text-xs text-ink3 mb-1 inline-block">
+              {t("inspector.screenName")}
+            </span>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -91,7 +101,7 @@ export function ScreenLayoutComposer() {
           </label>
           <label className="block">
             <span className="text-xs text-ink3 mb-1 inline-block">
-              Target file (optional)
+              {t("inspector.targetFileOptional")}
             </span>
             <input
               value={file}
@@ -104,7 +114,7 @@ export function ScreenLayoutComposer() {
 
         <label className="block">
           <span className="text-xs text-ink3 mb-1 inline-block">
-            Widget tree (JSON)
+            {t("inspector.widgetTree")}
           </span>
           <textarea
             value={tree}
@@ -114,9 +124,12 @@ export function ScreenLayoutComposer() {
             className="w-full px-2 py-1.5 border border-line rounded text-xs font-mono bg-card text-ink leading-relaxed"
           />
           <p className="text-[10px] font-mono text-ink3 mt-1">
-            Container kinds: <code>vbox</code> · <code>hbox</code> ·{" "}
-            <code>frame</code> · <code>button</code>. Leaves: <code>text</code>{" "}
-            · <code>textbutton</code> · <code>spacer</code>.
+            {t("inspector.containerKinds")} <code>vbox</code> · <code>hbox</code> ·{" "}
+            <code>frame</code> · <code>button</code>
+            {t("inspector.hintGroupSeparator")}
+            {t("inspector.leaves")} <code>text</code> · <code>textbutton</code> ·{" "}
+            <code>spacer</code>
+            {t("inspector.hintEnd")}
           </p>
         </label>
 
@@ -127,13 +140,13 @@ export function ScreenLayoutComposer() {
             className="px-3 py-1.5 rounded text-sm text-white disabled:opacity-50"
             style={{ background: "var(--rp-accent)" }}
           >
-            {compose.isPending ? "Composing…" : "Compose screen"}
+            {compose.isPending ? t("inspector.composing") : t("inspector.composeScreen")}
           </button>
           <button
             onClick={() => setTree(SCREEN_LAYOUT_STARTER)}
             className="px-3 py-1.5 rounded text-sm border border-line text-ink2 hover:bg-cardAlt"
           >
-            Reset template
+            {t("inspector.resetTemplate")}
           </button>
         </div>
 
@@ -174,6 +187,7 @@ interface SpriteRow {
 const EMPTY_SPRITE: SpriteRow = { tag: "", expression: "", position: "" };
 
 export function StageComposer() {
+  const { t } = useI18n();
   const [label, setLabel] = useState("");
   const [background, setBackground] = useState("");
   const [transition, setTransition] = useState("");
@@ -229,17 +243,17 @@ export function StageComposer() {
   return (
     <ComposerSection
       icon={<Layers className="w-4 h-4 text-ink3" />}
-      title="Stage Composer"
+      title={t("inspector.stageComposer")}
       toolName="add_stage"
     >
       <div className="grid grid-cols-2 gap-3">
-        <FieldLabel text="Target label">
+        <FieldLabel text={t("inspector.targetLabel")}>
           <select
             value={label}
             onChange={(e) => setLabel(e.target.value)}
             className="w-full px-2 py-1.5 border border-line rounded text-sm font-mono bg-card text-ink"
           >
-            <option value="">— select label —</option>
+            <option value="">{t("inspector.selectLabel")}</option>
             {(labelsQ.data?.labels ?? []).map((l) => (
               <option key={l.name} value={l.name}>
                 {l.name}
@@ -247,7 +261,7 @@ export function StageComposer() {
             ))}
           </select>
         </FieldLabel>
-        <FieldLabel text="Background">
+        <FieldLabel text={t("inspector.background")}>
           <input
             value={background}
             onChange={(e) => setBackground(e.target.value)}
@@ -257,33 +271,33 @@ export function StageComposer() {
         </FieldLabel>
       </div>
 
-      <FieldLabel text="Sprites">
+      <FieldLabel text={t("inspector.sprites")}>
         <div className="space-y-1.5">
           {sprites.map((s, i) => (
             <div key={i} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-1.5">
               <input
                 value={s.tag}
                 onChange={(e) => updateSprite(i, { tag: e.target.value })}
-                placeholder="tag (eileen)"
+                placeholder={t("inspector.spriteTagPlaceholder")}
                 className="px-2 py-1 border border-line rounded text-xs font-mono bg-card text-ink"
               />
               <input
                 value={s.expression}
                 onChange={(e) => updateSprite(i, { expression: e.target.value })}
-                placeholder="expression (happy)"
+                placeholder={t("inspector.spriteExpressionPlaceholder")}
                 className="px-2 py-1 border border-line rounded text-xs font-mono bg-card text-ink"
               />
               <input
                 value={s.position}
                 onChange={(e) => updateSprite(i, { position: e.target.value })}
-                placeholder="position (left)"
+                placeholder={t("inspector.spritePositionPlaceholder")}
                 className="px-2 py-1 border border-line rounded text-xs font-mono bg-card text-ink"
               />
               <button
                 onClick={() => removeSprite(i)}
                 disabled={sprites.length === 1}
                 className="p-1 text-ink3 hover:text-rose-600 disabled:opacity-30"
-                title="Remove sprite"
+                title={t("inspector.removeSprite")}
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -294,12 +308,12 @@ export function StageComposer() {
             className="inline-flex items-center gap-1 px-2 py-1 rounded border border-dashed border-line text-xs text-ink3 hover:text-ink"
           >
             <Plus className="w-3 h-3" />
-            sprite
+            {t("inspector.addSprite")}
           </button>
         </div>
       </FieldLabel>
 
-      <FieldLabel text="Transition (optional)">
+      <FieldLabel text={t("inspector.transitionOptional")}>
         <input
           value={transition}
           onChange={(e) => setTransition(e.target.value)}
@@ -318,7 +332,7 @@ export function StageComposer() {
           setTransition("");
           setSprites([{ ...EMPTY_SPRITE }]);
         }}
-        composeLabel="Compose stage"
+        composeLabel={t("inspector.composeStage")}
       />
 
       <ComposerOutcome error={error} report={report} />
@@ -339,6 +353,7 @@ interface HotspotRow {
 const EMPTY_HOTSPOT: HotspotRow = { x: "0", y: "0", w: "100", h: "50", action: "" };
 
 export function ImageMapComposer() {
+  const { t } = useI18n();
   const [name, setName] = useState("");
   const [ground, setGround] = useState("");
   const [hover, setHover] = useState("");
@@ -370,7 +385,8 @@ export function ImageMapComposer() {
           h: parseFloat(h.h) || 0,
           action: h.action.trim(),
         }));
-      if (cleaned.length === 0) throw new Error("at least one hotspot needs an action");
+      if (cleaned.length === 0)
+        throw new Error(t("inspector.hotspotActionRequired"));
       const body: Record<string, unknown> = {
         name,
         ground: ground.trim(),
@@ -395,11 +411,11 @@ export function ImageMapComposer() {
   return (
     <ComposerSection
       icon={<ImageIcon className="w-4 h-4 text-ink3" />}
-      title="ImageMap Composer"
+      title={t("inspector.imagemapComposer")}
       toolName="add_imagemap"
     >
       <div className="grid grid-cols-2 gap-3">
-        <FieldLabel text="Screen name">
+        <FieldLabel text={t("inspector.screenName")}>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -407,7 +423,7 @@ export function ImageMapComposer() {
             className="w-full px-2 py-1.5 border border-line rounded text-sm font-mono bg-card text-ink"
           />
         </FieldLabel>
-        <FieldLabel text="Target file (optional)">
+        <FieldLabel text={t("inspector.targetFileOptional")}>
           <input
             value={file}
             onChange={(e) => setFile(e.target.value)}
@@ -418,7 +434,7 @@ export function ImageMapComposer() {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <FieldLabel text="Ground image">
+        <FieldLabel text={t("inspector.groundImage")}>
           <input
             value={ground}
             onChange={(e) => setGround(e.target.value)}
@@ -426,7 +442,7 @@ export function ImageMapComposer() {
             className="w-full px-2 py-1.5 border border-line rounded text-sm font-mono bg-card text-ink"
           />
         </FieldLabel>
-        <FieldLabel text="Hover image">
+        <FieldLabel text={t("inspector.hoverImage")}>
           <input
             value={hover}
             onChange={(e) => setHover(e.target.value)}
@@ -436,7 +452,7 @@ export function ImageMapComposer() {
         </FieldLabel>
       </div>
 
-      <FieldLabel text="Hotspots (x y w h → action)">
+      <FieldLabel text={t("inspector.hotspots")}>
         <div className="space-y-1.5">
           {hotspots.map((h, i) => (
             <div
@@ -462,7 +478,7 @@ export function ImageMapComposer() {
                 onClick={() => removeHs(i)}
                 disabled={hotspots.length === 1}
                 className="p-1 text-ink3 hover:text-rose-600 disabled:opacity-30"
-                title="Remove hotspot"
+                title={t("inspector.removeHotspot")}
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -473,7 +489,7 @@ export function ImageMapComposer() {
             className="inline-flex items-center gap-1 px-2 py-1 rounded border border-dashed border-line text-xs text-ink3 hover:text-ink"
           >
             <Plus className="w-3 h-3" />
-            hotspot
+            {t("inspector.addHotspot")}
           </button>
         </div>
       </FieldLabel>
@@ -489,7 +505,7 @@ export function ImageMapComposer() {
           setFile("");
           setHotspots([{ ...EMPTY_HOTSPOT }]);
         }}
-        composeLabel="Compose imagemap"
+        composeLabel={t("inspector.composeImagemap")}
       />
 
       <ComposerOutcome error={error} report={report} />
@@ -512,6 +528,7 @@ interface ChoiceRow {
 const EMPTY_CHOICE: ChoiceRow = { text: "", condition: "", body: "pass" };
 
 export function MenuComposer() {
+  const { t } = useI18n();
   const [label, setLabel] = useState("");
   const [choices, setChoices] = useState<ChoiceRow[]>([{ ...EMPTY_CHOICE }]);
   const [error, setError] = useState<string | null>(null);
@@ -549,7 +566,7 @@ export function MenuComposer() {
           ch.body = lines.length ? lines : ["pass"];
           return ch;
         });
-      if (cleaned.length === 0) throw new Error("at least one choice needs text");
+      if (cleaned.length === 0) throw new Error(t("inspector.choiceTextRequired"));
       const data = await api<{
         summary?: string;
         file?: string;
@@ -570,16 +587,16 @@ export function MenuComposer() {
   return (
     <ComposerSection
       icon={<GitBranch className="w-4 h-4 text-ink3" />}
-      title="Menu Composer"
+      title={t("inspector.menuComposer")}
       toolName="add_menu"
     >
-      <FieldLabel text="Target label">
+      <FieldLabel text={t("inspector.targetLabel")}>
         <select
           value={label}
           onChange={(e) => setLabel(e.target.value)}
           className="w-full px-2 py-1.5 border border-line rounded text-sm font-mono bg-card text-ink"
         >
-          <option value="">— select label —</option>
+          <option value="">{t("inspector.selectLabel")}</option>
           {(labelsQ.data?.labels ?? []).map((l) => (
             <option key={l.name} value={l.name}>
               {l.name}
@@ -588,7 +605,7 @@ export function MenuComposer() {
         </select>
       </FieldLabel>
 
-      <FieldLabel text="Choices">
+      <FieldLabel text={t("inspector.choices")}>
         <div className="space-y-2">
           {choices.map((c, i) => (
             <div
@@ -599,19 +616,19 @@ export function MenuComposer() {
                 <input
                   value={c.text}
                   onChange={(e) => updateChoice(i, { text: e.target.value })}
-                  placeholder='Choice text (e.g. "Take the left path")'
+                  placeholder={t("inspector.choiceTextPlaceholder")}
                   className="w-full px-2 py-1 border border-line rounded text-xs bg-card text-ink"
                 />
                 <input
                   value={c.condition}
                   onChange={(e) => updateChoice(i, { condition: e.target.value })}
-                  placeholder='if condition (optional, e.g. "trust > 0")'
+                  placeholder={t("inspector.choiceConditionPlaceholder")}
                   className="w-full px-2 py-1 border border-line rounded text-xs font-mono bg-card text-ink"
                 />
                 <textarea
                   value={c.body}
                   onChange={(e) => updateChoice(i, { body: e.target.value })}
-                  placeholder="body lines, one per line (default: pass)"
+                  placeholder={t("inspector.choiceBodyPlaceholder")}
                   rows={2}
                   className="w-full px-2 py-1 border border-line rounded text-xs font-mono bg-card text-ink"
                 />
@@ -620,7 +637,7 @@ export function MenuComposer() {
                 onClick={() => removeChoice(i)}
                 disabled={choices.length === 1}
                 className="p-1 text-ink3 hover:text-rose-600 disabled:opacity-30 self-start"
-                title="Remove choice"
+                title={t("inspector.removeChoice")}
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -631,7 +648,7 @@ export function MenuComposer() {
             className="inline-flex items-center gap-1 px-2 py-1 rounded border border-dashed border-line text-xs text-ink3 hover:text-ink"
           >
             <Plus className="w-3 h-3" />
-            choice
+            {t("inspector.addChoice")}
           </button>
         </div>
       </FieldLabel>
@@ -644,7 +661,7 @@ export function MenuComposer() {
           setLabel("");
           setChoices([{ ...EMPTY_CHOICE }]);
         }}
-        composeLabel="Compose menu"
+        composeLabel={t("inspector.composeMenu")}
       />
 
       <ComposerOutcome error={error} report={report} />
@@ -705,6 +722,7 @@ function ComposerActions({
   onReset: () => void;
   composeLabel: string;
 }) {
+  const { t } = useI18n();
   return (
     <div className="flex items-center gap-2">
       <button
@@ -713,13 +731,13 @@ function ComposerActions({
         className="px-3 py-1.5 rounded text-sm text-white disabled:opacity-50"
         style={{ background: "var(--rp-accent)" }}
       >
-        {pending ? "Composing…" : composeLabel}
+        {pending ? t("inspector.composing") : composeLabel}
       </button>
       <button
         onClick={onReset}
         className="px-3 py-1.5 rounded text-sm border border-line text-ink2 hover:bg-cardAlt"
       >
-        Reset
+        {t("inspector.reset")}
       </button>
     </div>
   );
