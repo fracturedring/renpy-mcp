@@ -21,7 +21,11 @@ classifiers = [
     "Topic :: Software Development :: Code Generators",
 ]
 dependencies = [
-    "mcp>=1.2.0",
+    # Upper bound is load-bearing: mcp 2.x drops the low-level `Server.list_tools()`
+    # / `Server.call_tool()` decorators this server is built on, so resolving to
+    # mcp 2 makes `renpy-mcp` die at startup with
+    # `AttributeError: 'Server' object has no attribute 'list_tools'`.
+    "mcp>=1.2.0,<2",
     "pydantic>=2.0",
     "unidiff>=0.7",
 ]
