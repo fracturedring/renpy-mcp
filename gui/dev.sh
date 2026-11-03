@@ -16,7 +16,15 @@ PROJECT="$1"
 SDK="$2"
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PYTHON="${PYTHON:-$REPO_ROOT/.venv/bin/python}"
+# venv layout differs per platform: POSIX uses `bin/`, Windows uses `Scripts/`.
+if [[ -x "$REPO_ROOT/.venv/bin/python" ]]; then
+    DEFAULT_PYTHON="$REPO_ROOT/.venv/bin/python"
+elif [[ -x "$REPO_ROOT/.venv/Scripts/python.exe" ]]; then
+    DEFAULT_PYTHON="$REPO_ROOT/.venv/Scripts/python.exe"
+else
+    DEFAULT_PYTHON="python3"
+fi
+PYTHON="${PYTHON:-$DEFAULT_PYTHON}"
 
 cleanup() { kill 0 2>/dev/null || true; }
 trap cleanup EXIT INT TERM

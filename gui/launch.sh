@@ -17,16 +17,37 @@ cd "$repo"
 
 if [ ! -d ".venv" ]; then
   echo "Creating .venv (one-time, ~30 seconds)…"
-  python3 -m venv .venv
+  if command -v python3 >/dev/null 2>&1; then
+    python3 -m venv .venv
+  else
+    python -m venv .venv
+  fi
+fi
+
+# venv layout differs per platform: POSIX uses `bin/`, Windows uses `Scripts/`.
+# Git Bash on Windows reports a Windows venv, so probe rather than assume.
+if [ -f ".venv/bin/activate" ]; then
+  venv_bin=".venv/bin"
+elif [ -f ".venv/Scripts/activate" ]; then
+  venv_bin=".venv/Scripts"
+else
+  echo "error: .venv exists but has no activate script — remove it and re-run." >&2
+  exit 1
 fi
 
 # shellcheck disable=SC1091
-source .venv/bin/activate
+source "$venv_bin/activate"
+export PATH="$PWD/$venv_bin:$PATH"
 
 # Install the package + GUI extras if rpbuilder isn't on PATH yet.
 if ! command -v rpbuilder >/dev/null 2>&1; then
   echo "Installing renpy-mcp[gui] (one-time, ~1-2 minutes)…"
-  pip install -q -e ".[gui]"
+  if command -v uv >/dev/null 2>&1; then
+    # uv manages the venv it created; pip isn't installed inside it.
+    uv pip install -q -e ".[gui]"
+  else
+    python -m pip install -q -e ".[gui]"
+  fi
 fi
 
 # Pre-build the frontend so the editor renders even on first run.
