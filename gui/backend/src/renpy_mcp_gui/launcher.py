@@ -588,7 +588,30 @@ def run(cfg: LauncherConfig) -> int:
 # ---------- entry point -------------------------------------------------------
 
 
+def _force_unicode_stdout() -> None:
+    """Make the interactive UI's box-drawing glyphs survive a legacy console.
+
+    This launcher prints ✓ / ✗ / ─ / █ to stdout. On Windows the console default
+    is the ANSI code page (cp936, cp1252, …), which can't encode them, and every
+    prompt that shows a bullet dies with
+    `UnicodeEncodeError: 'gbk' codec can't encode character '\\u2717'`.
+    Reconfiguring the stream to UTF-8 fixes it where the console understands
+    UTF-8; where it doesn't, `errors="replace"` degrades the glyph instead of
+    crashing the whole launcher. No-op on POSIX (already UTF-8).
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:
+            continue
+        try:
+            reconfigure(encoding="utf-8", errors="replace")
+        except (OSError, ValueError):
+            # Detached/closed stream, or a wrapper that refuses reconfiguration.
+            pass
+
+
 def main() -> int:
+    _force_unicode_stdout()
     cfg = LauncherConfig.load()
     try:
         return run(cfg)
